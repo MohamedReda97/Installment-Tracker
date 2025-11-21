@@ -51,28 +51,54 @@
       font-size: 0.9rem;
     }
 
-    /* Style for date inputs to show dd/mm/yyyy format */
-    input[type="date"]::-webkit-datetime-edit,
-    input[type="date"]::-webkit-inner-spin-button,
-    input[type="date"]::-webkit-clear-button {
-      display: none;
+    /* Style for date wrapper */
+    .date-wrapper {
+      position: relative;
+      display: inline-block;
+      width: 100%;
     }
 
-    input[type="date"]::-webkit-calendar-picker-indicator {
+    .date-wrapper input[type="text"] {
+      width: 100%;
+      padding-right: 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .date-wrapper input[type="date"] {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 2rem;
+      height: 100%;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 2;
+      pointer-events: auto;
+    }
+
+    .date-wrapper input[type="date"]::-webkit-calendar-picker-indicator {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      cursor: pointer;
+      opacity: 1;
+    }
+
+    /* Calendar icon overlay */
+    .date-wrapper::after {
+      content: '📅';
       position: absolute;
       right: 0.5rem;
-      color: #e5e7eb;
-      opacity: 0.7;
-    }
-
-    input[type="date"]::before {
-      content: attr(data-date);
-      color: #e5e7eb;
-    }
-
-    input[type="date"]:focus::before,
-    input[type="date"]:valid::before {
-      content: attr(data-date);
+      top: 50%;
+      transform: translateY(-50%);
+      pointer-events: none;
+      font-size: 1rem;
+      z-index: 0;
     }
     input:focus {
       outline: none;
@@ -227,9 +253,6 @@
           <button class="secondary" id="decreaseMonthBtn" type="button" title="Previous month">◀</button>
           <button class="secondary" id="increaseMonthBtn" type="button" title="Next month">▶</button>
         </div>
-        <div class="small-hint">
-          يبدأ الحساب من الشهر اللي بعده. مثال: كشف أكتوبر → اختر <strong>2025-10</strong>.
-        </div>
       </div>
       <div style="flex: 1 1 auto;"></div>
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
@@ -322,10 +345,10 @@
 
     <div style="margin-top: 1rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap:wrap;">
       <button class="primary" id="calculateBtn" type="button">⚙️ Calculate Timeline</button>
-      <span class="small-hint">
+      <!-- <span class="small-hint">
         أدخل / عدّل Enrollment Date, Amount, Total Installments، ثم اضغط <strong>Calculate Timeline</strong>.  
         استخدم <strong>Save Data</strong> لحفظ الجدول في المتصفح (بدون حفظ الـ Billing month).
-      </span>
+      </span> -->
     </div>
   </div>
 
@@ -392,20 +415,84 @@
       return `${parts[2]}-${parts[1]}-${parts[0]}`;
     }
 
-    // Update date input to show dd/mm/yyyy format using title attribute
-    function setupDateInput(input) {
-      input.addEventListener('change', function() {
+    // Create a date input wrapper with text display (dd/mm/yyyy) and hidden date picker
+    function createDateInputWrapper(value = '') {
+      const wrapper = document.createElement('div');
+      wrapper.className = 'date-wrapper';
+
+      const textInput = document.createElement('input');
+      textInput.type = 'text';
+      textInput.placeholder = 'dd/mm/yyyy';
+      textInput.className = 'auto-recalc date-display';
+      if (value) {
+        textInput.value = ymdToDMY(value);
+      }
+
+      const dateInput = document.createElement('input');
+      dateInput.type = 'date';
+      dateInput.className = 'date-picker-hidden';
+      dateInput.tabIndex = -1; // Prevent tab focus on hidden input
+      if (value) {
+        dateInput.value = value;
+      }
+
+      // When date picker changes, update text input
+      dateInput.addEventListener('change', function() {
         if (this.value) {
-          this.setAttribute('data-date', ymdToDMY(this.value));
-          this.style.setProperty('--date-display', `"${ymdToDMY(this.value)}"`);
+          textInput.value = ymdToDMY(this.value);
+          textInput.dispatchEvent(new Event('change', { bubbles: true }));
         }
       });
 
-      // Set initial display if value exists
-      if (input.value) {
-        input.setAttribute('data-date', ymdToDMY(input.value));
-        input.style.setProperty('--date-display', `"${ymdToDMY(input.value)}"`);
+      // When text input changes manually, try to parse and update date picker
+      textInput.addEventListener('input', function() {
+        // Auto-format as user types
+        let val = this.value.replace(/[^\d]/g, ''); // Remove non-digits
+        if (val.length >= 2) {
+          val = val.substring(0, 2) + '/' + val.substring(2);
+        }
+        if (val.length >= 5) {
+          val = val.substring(0, 5) + '/' + val.substring(5, 9);
+        }
+        this.value = val;
+      });
+
+      textInput.addEventListener('blur', function() {
+        const ymd = dmyToYMD(this.value);
+        if (ymd && ymd.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          // Validate the date
+          const testDate = new Date(ymd + 'T00:00:00');
+          if (!isNaN(testDate.getTime())) {
+            dateInput.value = ymd;
+            this.value = ymdToDMY(ymd); // Reformat to ensure consistency
+            this.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        }
+      });
+
+      // Allow Enter key to trigger blur
+      textInput.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+          this.blur();
+        }
+      });
+
+      wrapper.appendChild(textInput);
+      wrapper.appendChild(dateInput);
+
+      return wrapper;
+    }
+
+    // Get the actual date value from a date wrapper
+    function getDateValue(cell) {
+      const wrapper = cell.querySelector('.date-wrapper');
+      if (wrapper) {
+        const dateInput = wrapper.querySelector('input[type="date"]');
+        return dateInput ? dateInput.value : '';
       }
+      // Fallback for old-style date inputs
+      const input = cell.querySelector('input[type="date"]');
+      return input ? input.value : '';
     }
 
     function deleteRow(btn) {
@@ -416,31 +503,63 @@
     function addRow(data) {
       const tbody = document.querySelector('#installmentsTable tbody');
       const tr = document.createElement('tr');
-      tr.innerHTML = `
-        <td><input type="text" placeholder="Merchant" /></td>
-        <td><input type="date" class="auto-recalc" /></td>
-        <td><input type="number" step="0.01" placeholder="Amount" /></td>
-        <td><input type="number" placeholder="Total" class="auto-recalc" /></td>
-        <td></td><td></td><td></td>
-        <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
-      `;
+
+      // Create cells
+      const tdMerchant = document.createElement('td');
+      const tdDate = document.createElement('td');
+      const tdAmount = document.createElement('td');
+      const tdTotal = document.createElement('td');
+      const tdFirst = document.createElement('td');
+      const tdCurrent = document.createElement('td');
+      const tdRemaining = document.createElement('td');
+      const tdActions = document.createElement('td');
+
+      // Merchant input
+      const merchantInput = document.createElement('input');
+      merchantInput.type = 'text';
+      merchantInput.placeholder = 'Merchant';
+      if (data && data.merchant) merchantInput.value = data.merchant;
+      tdMerchant.appendChild(merchantInput);
+
+      // Date wrapper
+      const dateWrapper = createDateInputWrapper(data ? data.enrollmentDate : '');
+      tdDate.appendChild(dateWrapper);
+
+      // Amount input
+      const amountInput = document.createElement('input');
+      amountInput.type = 'number';
+      amountInput.step = '0.01';
+      amountInput.placeholder = 'Amount';
+      if (data && data.amount) amountInput.value = data.amount;
+      tdAmount.appendChild(amountInput);
+
+      // Total input
+      const totalInput = document.createElement('input');
+      totalInput.type = 'number';
+      totalInput.placeholder = 'Total';
+      totalInput.className = 'auto-recalc';
+      if (data && data.total) totalInput.value = data.total;
+      tdTotal.appendChild(totalInput);
+
+      // Delete button
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'danger';
+      deleteBtn.type = 'button';
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.onclick = function() { deleteRow(this); };
+      tdActions.appendChild(deleteBtn);
+
+      // Append all cells
+      tr.appendChild(tdMerchant);
+      tr.appendChild(tdDate);
+      tr.appendChild(tdAmount);
+      tr.appendChild(tdTotal);
+      tr.appendChild(tdFirst);
+      tr.appendChild(tdCurrent);
+      tr.appendChild(tdRemaining);
+      tr.appendChild(tdActions);
+
       tbody.appendChild(tr);
-
-      const dateInput = tr.querySelectorAll('input')[1];
-      setupDateInput(dateInput);
-
-      if (data) {
-        const inputs = tr.querySelectorAll('input');
-        inputs[0].value = data.merchant || '';
-        inputs[1].value = data.enrollmentDate || '';
-        inputs[2].value = data.amount || '';
-        inputs[3].value = data.total || '';
-
-        // Update date display
-        if (data.enrollmentDate) {
-          dateInput.setAttribute('data-date', ymdToDMY(data.enrollmentDate));
-        }
-      }
 
       // Add event listeners for auto-recalculation
       const autoRecalcInputs = tr.querySelectorAll('.auto-recalc');
@@ -478,18 +597,22 @@
       // Sort rows based on column
       rows.sort((rowA, rowB) => {
         let valA, valB;
+        const cellsA = rowA.querySelectorAll('td');
+        const cellsB = rowB.querySelectorAll('td');
 
         if (column === 'enrollmentDate') {
-          const inputA = rowA.querySelectorAll('input')[1].value;
-          const inputB = rowB.querySelectorAll('input')[1].value;
-          valA = inputA ? new Date(inputA + 'T00:00:00').getTime() : 0;
-          valB = inputB ? new Date(inputB + 'T00:00:00').getTime() : 0;
+          const dateA = getDateValue(cellsA[1]);
+          const dateB = getDateValue(cellsB[1]);
+          valA = dateA ? new Date(dateA + 'T00:00:00').getTime() : 0;
+          valB = dateB ? new Date(dateB + 'T00:00:00').getTime() : 0;
         } else if (column === 'amount') {
-          valA = parseFloat(rowA.querySelectorAll('input')[2].value) || 0;
-          valB = parseFloat(rowB.querySelectorAll('input')[2].value) || 0;
+          const inputA = cellsA[2].querySelector('input');
+          const inputB = cellsB[2].querySelector('input');
+          valA = parseFloat(inputA ? inputA.value : 0) || 0;
+          valB = parseFloat(inputB ? inputB.value : 0) || 0;
         } else if (column === 'currentInstallment') {
-          valA = parseInt(rowA.querySelectorAll('td')[5].textContent) || 0;
-          valB = parseInt(rowB.querySelectorAll('td')[5].textContent) || 0;
+          valA = parseInt(cellsA[5].textContent) || 0;
+          valB = parseInt(cellsB[5].textContent) || 0;
         }
 
         if (currentSortDirection === 'asc') {
@@ -525,12 +648,18 @@
       const rows = document.querySelectorAll('#installmentsTable tbody tr');
       const data = [];
       rows.forEach((row) => {
-        const inputs = row.querySelectorAll('input');
-        if (inputs.length < 4) return;
-        const merchant = inputs[0].value.trim();
-        const enrollmentDate = inputs[1].value.trim();
-        const amount = inputs[2].value.trim();
-        const total = inputs[3].value.trim();
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 4) return;
+
+        const merchantInput = cells[0].querySelector('input');
+        const enrollmentDate = getDateValue(cells[1]);
+        const amountInput = cells[2].querySelector('input');
+        const totalInput = cells[3].querySelector('input');
+
+        const merchant = merchantInput ? merchantInput.value.trim() : '';
+        const amount = amountInput ? amountInput.value.trim() : '';
+        const total = totalInput ? totalInput.value.trim() : '';
+
         if (!merchant && !enrollmentDate && !amount && !total) return;
         data.push({ merchant, enrollmentDate, amount, total });
       });
@@ -584,7 +713,7 @@
         if (cells.length < 7) return;
 
         const merchantInput   = cells[0].querySelector('input');
-        const enrollmentInput = cells[1].querySelector('input');
+        const enrollmentVal   = getDateValue(cells[1]);
         const amountInput     = cells[2].querySelector('input');
         const totalInput      = cells[3].querySelector('input');
         const firstCell       = cells[4];
@@ -595,10 +724,9 @@
         currentCell.textContent = '';
         remainingCell.textContent = '';
 
-        const merchantName = merchantInput.value.trim();
-        const enrollmentVal = enrollmentInput.value;
-        const amount = parseFloat(amountInput.value);
-        const totalInst = parseInt(totalInput.value, 10);
+        const merchantName = merchantInput ? merchantInput.value.trim() : '';
+        const amount = parseFloat(amountInput ? amountInput.value : 0);
+        const totalInst = parseInt(totalInput ? totalInput.value : 0, 10);
 
         if (!enrollmentVal || isNaN(amount) || isNaN(totalInst) || totalInst <= 0) {
           return;
@@ -956,6 +1084,25 @@
       input.dispatchEvent(new Event('change'));
     });
 
+    // Convert existing date inputs to date wrappers
+    function convertExistingDateInputs() {
+      const rows = document.querySelectorAll('#installmentsTable tbody tr');
+      rows.forEach(row => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 2) return;
+
+        const dateCell = cells[1];
+        const oldDateInput = dateCell.querySelector('input[type="date"]');
+
+        if (oldDateInput && !dateCell.querySelector('.date-wrapper')) {
+          const value = oldDateInput.value;
+          dateCell.innerHTML = '';
+          const wrapper = createDateInputWrapper(value);
+          dateCell.appendChild(wrapper);
+        }
+      });
+    }
+
     // init: Billing month = الشهر الحالي + تحميل الجدول من التخزين + حساب الأعمدة
     (function init() {
       const now = new Date();
@@ -965,11 +1112,8 @@
 
       loadTableFromStorage(); // لو فيه داتا محفوظة هتكتب مكان الـ sample rows
 
-      // Setup all date inputs to show dd/mm/yyyy format
-      const allDateInputs = document.querySelectorAll('input[type="date"]');
-      allDateInputs.forEach(input => {
-        setupDateInput(input);
-      });
+      // Convert existing date inputs to wrappers
+      convertExistingDateInputs();
 
       // Add event listeners to existing rows for auto-recalculation
       const existingAutoRecalcInputs = document.querySelectorAll('#installmentsTable .auto-recalc');
