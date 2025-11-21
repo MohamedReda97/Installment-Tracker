@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Installments Timeline</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Chart.js -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Data labels plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <style>
+    :root {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      color-scheme: dark light;
+    }
+    body {
+      margin: 0;
+      padding: 1.5rem;
+      background: #111827;
+      color: #e5e7eb;
+    }
+    h1, h2 {
+      margin-top: 0;
+      color: #f9fafb;
+    }
+    .card {
+      background: #1f2933;
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      margin-bottom: 1.5rem;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+    }
+    label {
+      display: inline-block;
+      margin-bottom: 0.25rem;
+      font-size: 0.9rem;
+      color: #9ca3af;
+    }
+    input, button {
+      font-family: inherit;
+    }
+    input[type="month"],
+    input[type="number"],
+    input[type="text"],
+    input[type="date"] {
+      background: #111827;
+      color: #e5e7eb;
+      border: 1px solid #374151;
+      border-radius: 8px;
+      padding: 0.35rem 0.5rem;
+      font-size: 0.9rem;
+    }
+    input:focus {
+      outline: none;
+      border-color: #3b82f6;
+      box-shadow: 0 0 0 1px #3b82f6;
+    }
+    button {
+      border-radius: 999px;
+      border: none;
+      cursor: pointer;
+      padding: 0.45rem 0.9rem;
+      font-size: 0.9rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.25rem;
+      transition: transform 0.08s ease, box-shadow 0.08s ease, background 0.15s ease;
+    }
+    button.primary {
+      background: linear-gradient(135deg, #2563eb, #4f46e5);
+      color: white;
+      box-shadow: 0 8px 20px rgba(37,99,235,0.35);
+    }
+    button.primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 10px 25px rgba(37,99,235,0.45);
+    }
+    button.secondary {
+      background: #111827;
+      color: #e5e7eb;
+      border: 1px solid #374151;
+    }
+    button.secondary:hover {
+      background: #1f2937;
+    }
+    button.danger {
+      background: #b91c1c;
+      color: white;
+    }
+    button.danger:hover {
+      background: #dc2626;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    thead {
+      background: #111827;
+    }
+    th, td {
+      border-bottom: 1px solid #374151;
+      padding: 0.4rem 0.3rem;
+      text-align: left;
+      white-space: nowrap;
+      vertical-align: middle;
+    }
+    th {
+      font-weight: 600;
+      color: #9ca3af;
+    }
+    tbody tr:hover {
+      background: rgba(55, 65, 81, 0.55);
+    }
+    td input {
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #timelineSummaryTable {
+      margin-top: 1rem;
+      border-collapse: collapse;
+      width: 100%;
+      font-size: 0.85rem;
+    }
+    #timelineSummaryTable th,
+    #timelineSummaryTable td {
+      border-bottom: 1px solid #374151;
+      padding: 0.3rem 0.4rem;
+      text-align: left;
+    }
+    #timelineSummaryTable th {
+      color: #9ca3af;
+    }
+    .small-hint {
+      font-size: 0.8rem;
+      color: #9ca3af;
+      margin-top: 0.25rem;
+    }
+    .month-controls {
+      display: inline-flex;
+      gap: 0.25rem;
+      margin-left: 0.5rem;
+      vertical-align: middle;
+    }
+    .month-controls button {
+      padding: 0.25rem 0.5rem;
+      font-size: 0.85rem;
+      min-width: 32px;
+    }
+    @media (max-width: 768px) {
+      table, #timelineSummaryTable {
+        font-size: 0.75rem;
+      }
+      body {
+        padding: 0.8rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>Installments Timeline</h1>
+
+  <div class="card">
+    <div class="toolbar">
+      <div>
+        <label for="billingMonth">Billing month (statement month)</label><br />
+        <input id="billingMonth" type="month" />
+        <div class="month-controls">
+          <button class="secondary" id="decreaseMonthBtn" type="button" title="Previous month">◀</button>
+          <button class="secondary" id="increaseMonthBtn" type="button" title="Next month">▶</button>
+        </div>
+        <div class="small-hint">
+          يبدأ الحساب من الشهر اللي بعده. مثال: كشف أكتوبر → اختر <strong>2025-10</strong>.
+        </div>
+      </div>
+      <div style="flex: 1 1 auto;"></div>
+      <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <button class="secondary" id="addRowBtn" type="button">＋ Add row</button>
+        <button class="secondary" id="saveDataBtn" type="button">💾 Save Data</button>
+      </div>
+    </div>
+
+    <table id="installmentsTable">
+      <thead>
+        <tr>
+          <th>Merchant</th>
+          <th>Enrollment Date</th>
+          <th>Monthly Amount (Total)</th>
+          <th>Total Installments (Out of)</th>
+          <th>First Installment</th>
+          <th>Current Installment No.</th>
+          <th>Remaining</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Sample data based on the screenshot (year assumed 2024/2025) -->
+        <tr>
+          <td><input type="text" value="NOON 511.60" /></td>
+          <td><input type="date" value="2024-11-09" /></td>
+          <td><input type="number" step="0.01" value="511.60" /></td>
+          <td><input type="number" value="15" /></td>
+          <td></td><td></td><td></td>
+          <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
+        </tr>
+        <tr>
+          <td><input type="text" value="NOON 183.95" /></td>
+          <td><input type="date" value="2024-11-09" /></td>
+          <td><input type="number" step="0.01" value="183.95" /></td>
+          <td><input type="number" value="15" /></td>
+          <td></td><td></td><td></td>
+          <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
+        </tr>
+        <tr>
+          <td><input type="text" value="Amazon 387.16" /></td>
+          <td><input type="date" value="2024-11-17" /></td>
+          <td><input type="number" step="0.01" value="387.16" /></td>
+          <td><input type="number" value="18" /></td>
+          <td></td><td></td><td></td>
+          <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
+        </tr>
+        <tr>
+          <td><input type="text" value="NOON 186.77" /></td>
+          <td><input type="date" value="2024-11-25" /></td>
+          <td><input type="number" step="0.01" value="186.77" /></td>
+          <td><input type="number" value="15" /></td>
+          <td></td><td></td><td></td>
+          <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
+        </tr>
+        <tr>
+          <td><input type="text" value="Amazon 1474.94" /></td>
+          <td><input type="date" value="2025-02-17" /></td>
+          <td><input type="number" step="0.01" value="1474.94" /></td>
+          <td><input type="number" value="12" /></td>
+          <td></td><td></td><td></td>
+          <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
+        </tr>
+        <tr>
+          <td><input type="text" value="NOON 634.90" /></td>
+          <td><input type="date" value="2025-10-01" /></td>
+          <td><input type="number" step="0.01" value="634.90" /></td>
+          <td><input type="number" value="10" /></td>
+          <td></td><td></td><td></td>
+          <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
+        </tr>
+        <tr>
+          <td><input type="text" value="NOON 236.59" /></td>
+          <td><input type="date" value="2025-10-02" /></td>
+          <td><input type="number" step="0.01" value="236.59" /></td>
+          <td><input type="number" value="10" /></td>
+          <td></td><td></td><td></td>
+          <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
+        </tr>
+        <tr>
+          <td><input type="text" value="NOON 109.63" /></td>
+          <td><input type="date" value="2025-10-04" /></td>
+          <td><input type="number" step="0.01" value="109.63" /></td>
+          <td><input type="number" value="10" /></td>
+          <td></td><td></td><td></td>
+          <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top: 1rem; display: flex; gap: 0.75rem; align-items: center; flex-wrap:wrap;">
+      <button class="primary" id="calculateBtn" type="button">⚙️ Calculate Timeline</button>
+      <span class="small-hint">
+        أدخل / عدّل Enrollment Date, Amount, Total Installments، ثم اضغط <strong>Calculate Timeline</strong>.  
+        استخدم <strong>Save Data</strong> لحفظ الجدول في المتصفح (بدون حفظ الـ Billing month).
+      </span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Monthly Payments Timeline</h2>
+    <canvas id="timelineChart" height="120"></canvas>
+    <table id="timelineSummaryTable">
+      <thead>
+        <tr>
+          <th>Month</th>
+          <th>Total Payment</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'installmentsTableData_v5';
+
+    function addMonthsToDate(dateObj, months) {
+      const d = new Date(dateObj.getTime());
+      d.setDate(1);
+      d.setMonth(d.getMonth() + months);
+      return d;
+    }
+
+    function formatMonthLabel(dateObj) {
+      return dateObj.toLocaleDateString(undefined, { year: 'numeric', month: 'short' });
+    }
+
+    function formatDateYMD(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+
+    function deleteRow(btn) {
+      const row = btn.closest('tr');
+      if (row) row.remove();
+    }
+
+    function addRow(data) {
+      const tbody = document.querySelector('#installmentsTable tbody');
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><input type="text" placeholder="Merchant" /></td>
+        <td><input type="date" /></td>
+        <td><input type="number" step="0.01" placeholder="Amount" /></td>
+        <td><input type="number" placeholder="Total" /></td>
+        <td></td><td></td><td></td>
+        <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
+      `;
+      tbody.appendChild(tr);
+
+      if (data) {
+        const inputs = tr.querySelectorAll('input');
+        inputs[0].value = data.merchant || '';
+        inputs[1].value = data.enrollmentDate || '';
+        inputs[2].value = data.amount || '';
+        inputs[3].value = data.total || '';
+      }
+    }
+
+    document.getElementById('addRowBtn').addEventListener('click', () => addRow());
+
+    // ---- Storage (table only, no billing month) ----
+    function readTableData() {
+      const rows = document.querySelectorAll('#installmentsTable tbody tr');
+      const data = [];
+      rows.forEach((row) => {
+        const inputs = row.querySelectorAll('input');
+        if (inputs.length < 4) return;
+        const merchant = inputs[0].value.trim();
+        const enrollmentDate = inputs[1].value.trim();
+        const amount = inputs[2].value.trim();
+        const total = inputs[3].value.trim();
+        if (!merchant && !enrollmentDate && !amount && !total) return;
+        data.push({ merchant, enrollmentDate, amount, total });
+      });
+      return data;
+    }
+
+    function writeTableData(dataArray) {
+      const tbody = document.querySelector('#installmentsTable tbody');
+      tbody.innerHTML = '';
+      dataArray.forEach((row) => addRow(row));
+    }
+
+    function saveTableToStorage() {
+      try {
+        const rowsData = readTableData();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(rowsData));
+        alert('Data saved locally ✔');
+      } catch (err) {
+        console.error('Error saving data:', err);
+        alert('Error saving data (check console).');
+      }
+    }
+
+    function loadTableFromStorage() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (!raw) return;
+        const data = JSON.parse(raw);
+        if (Array.isArray(data)) {
+          writeTableData(data);
+        }
+      } catch (err) {
+        console.error('Error loading data:', err);
+      }
+    }
+
+    document.getElementById('saveDataBtn').addEventListener('click', saveTableToStorage);
+
+    // ---- Core calculations ----
+
+    // يحسب First Installment / Current Installment / Remaining
+    // ويرجع Timeline (لو collectTimeline = true)
+    function recomputeRowsAndCollectTimeline(billingDate, collectTimeline) {
+      const rows = document.querySelectorAll('#installmentsTable tbody tr');
+      const totalsByMonth = new Map();
+
+      rows.forEach((row) => {
+        const cells = row.querySelectorAll('td');
+        if (cells.length < 7) return;
+
+        const enrollmentInput = cells[1].querySelector('input');
+        const amountInput     = cells[2].querySelector('input');
+        const totalInput      = cells[3].querySelector('input');
+        const firstCell       = cells[4];
+        const currentCell     = cells[5];
+        const remainingCell   = cells[6];
+
+        firstCell.textContent = '';
+        currentCell.textContent = '';
+        remainingCell.textContent = '';
+
+        const enrollmentVal = enrollmentInput.value;
+        const amount = parseFloat(amountInput.value);
+        const totalInst = parseInt(totalInput.value, 10);
+
+        if (!enrollmentVal || isNaN(amount) || isNaN(totalInst) || totalInst <= 0) {
+          return;
+        }
+
+        const enrollDate = new Date(enrollmentVal + 'T00:00:00');
+        const day = enrollDate.getDate();
+
+        // First billing month:
+        // day <=22 → نفس شهر الـ enrollment
+        // day >22  → الشهر اللي بعده
+        const firstBillingMonth = new Date(
+          enrollDate.getFullYear(),
+          enrollDate.getMonth() + (day > 22 ? 1 : 0),
+          1
+        );
+
+        // First installment date = 1 في الشهر اللي بعد firstBillingMonth
+        const firstInstallDate = addMonthsToDate(firstBillingMonth, 1);
+        firstCell.textContent = formatDateYMD(firstInstallDate);
+
+        // Current installment number عند billingMonth
+        let currentInst = 0;
+        let remaining = totalInst;
+
+        if (billingDate >= firstBillingMonth) {
+          const diffMonths =
+            (billingDate.getFullYear() - firstBillingMonth.getFullYear()) * 12 +
+            (billingDate.getMonth() - firstBillingMonth.getMonth());
+          currentInst = Math.min(totalInst, diffMonths + 1);
+          remaining = Math.max(0, totalInst - currentInst);
+        }
+
+        currentCell.textContent = currentInst.toString();
+        remainingCell.textContent = remaining.toString();
+
+        if (!collectTimeline || remaining <= 0) return;
+
+        // Add all future payments (>= billingDate) للتايملاين
+        for (let k = 0; k < totalInst; k++) {
+          const payDate = addMonthsToDate(firstInstallDate, k);
+          if (payDate < billingDate) continue;
+
+          const key = payDate.getFullYear() + '-' + String(payDate.getMonth() + 1).padStart(2, '0');
+          if (totalsByMonth.has(key)) {
+            totalsByMonth.get(key).total += amount;
+          } else {
+            totalsByMonth.set(key, { date: payDate, total: amount });
+          }
+        }
+      });
+
+      if (!collectTimeline) return [];
+
+      const sorted = Array.from(totalsByMonth.values()).sort((a, b) => a.date - b.date);
+      return sorted;
+    }
+
+    let timelineChart = null;
+
+    function calculateTimeline() {
+      const billingMonthValue = document.getElementById('billingMonth').value;
+      if (!billingMonthValue) {
+        alert('Please select the billing month (statement month).');
+        return;
+      }
+      const billingDate = new Date(billingMonthValue + '-01T00:00:00');
+
+      const timelinePairs = recomputeRowsAndCollectTimeline(billingDate, true);
+      if (timelinePairs.length === 0) {
+        alert('No installments found from this billing month onwards.');
+        updateChart([], []);
+        updateTimelineTable([]);
+        return;
+      }
+
+      const labels = timelinePairs.map(item => formatMonthLabel(item.date));
+      const data   = timelinePairs.map(item => Number(item.total.toFixed(2)));
+
+      updateChart(labels, data);
+      updateTimelineTable(timelinePairs);
+    }
+
+    function updateChart(labels, data) {
+      const ctx = document.getElementById('timelineChart').getContext('2d');
+
+      if (timelineChart) {
+        timelineChart.data.labels = labels;
+        timelineChart.data.datasets[0].data = data;
+        timelineChart.update();
+        return;
+      }
+
+      timelineChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Total payment per month',
+            data: data
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: {
+              labels: {
+                color: '#e5e7eb'
+              }
+            },
+            datalabels: {
+              anchor: 'end',
+              align: 'end',
+              color: '#e5e7eb',
+              font: {
+                weight: 'bold',
+                size: 10
+              },
+              formatter: (value) => value.toFixed(2)
+            }
+          },
+          scales: {
+            x: {
+              ticks: { color: '#e5e7eb' },
+              grid: { color: '#374151' }
+            },
+            y: {
+              ticks: { color: '#e5e7eb' },
+              grid: { color: '#374151' }
+            }
+          }
+        },
+        plugins: [ChartDataLabels]
+      });
+    }
+
+    function updateTimelineTable(timelinePairs) {
+      const tbody = document.querySelector('#timelineSummaryTable tbody');
+      tbody.innerHTML = '';
+
+      timelinePairs.forEach((item) => {
+        const tr = document.createElement('tr');
+        const monthStr = formatMonthLabel(item.date);
+        const tdMonth = document.createElement('td');
+        const tdTotal = document.createElement('td');
+        tdMonth.textContent = monthStr;
+        tdTotal.textContent = item.total.toFixed(2);
+        tr.appendChild(tdMonth);
+        tr.appendChild(tdTotal);
+        tbody.appendChild(tr);
+      });
+    }
+
+    document.getElementById('calculateBtn').addEventListener('click', calculateTimeline);
+
+    // لما الـ Billing month يتغير، نعيد حساب الأعمدة المشتقة (من غير رسم الجراف)
+    document.getElementById('billingMonth').addEventListener('change', () => {
+      const val = document.getElementById('billingMonth').value;
+      if (!val) return;
+      const billingDate = new Date(val + '-01T00:00:00');
+      recomputeRowsAndCollectTimeline(billingDate, false);
+    });
+
+    // Increase/Decrease billing month buttons
+    document.getElementById('increaseMonthBtn').addEventListener('click', () => {
+      const input = document.getElementById('billingMonth');
+      if (!input.value) return;
+      const currentDate = new Date(input.value + '-01T00:00:00');
+      const newDate = addMonthsToDate(currentDate, 1);
+      const year = newDate.getFullYear();
+      const month = String(newDate.getMonth() + 1).padStart(2, '0');
+      input.value = `${year}-${month}`;
+      input.dispatchEvent(new Event('change'));
+    });
+
+    document.getElementById('decreaseMonthBtn').addEventListener('click', () => {
+      const input = document.getElementById('billingMonth');
+      if (!input.value) return;
+      const currentDate = new Date(input.value + '-01T00:00:00');
+      const newDate = addMonthsToDate(currentDate, -1);
+      const year = newDate.getFullYear();
+      const month = String(newDate.getMonth() + 1).padStart(2, '0');
+      input.value = `${year}-${month}`;
+      input.dispatchEvent(new Event('change'));
+    });
+
+    // init: Billing month = الشهر الحالي + تحميل الجدول من التخزين + حساب الأعمدة
+    (function init() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      document.getElementById('billingMonth').value = `${year}-${month}`;
+
+      loadTableFromStorage(); // لو فيه داتا محفوظة هتكتب مكان الـ sample rows
+
+      const billingDate = new Date(`${year}-${month}-01T00:00:00`);
+      recomputeRowsAndCollectTimeline(billingDate, false);
+    })();
+  </script>
+</body>
+</html>
