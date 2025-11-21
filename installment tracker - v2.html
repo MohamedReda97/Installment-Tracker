@@ -117,6 +117,29 @@
       font-weight: 600;
       color: #9ca3af;
     }
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+      position: relative;
+      padding-right: 1.2rem;
+    }
+    th.sortable:hover {
+      color: #e5e7eb;
+    }
+    th.sortable::after {
+      content: '⇅';
+      position: absolute;
+      right: 0.3rem;
+      opacity: 0.4;
+    }
+    th.sortable.asc::after {
+      content: '▲';
+      opacity: 1;
+    }
+    th.sortable.desc::after {
+      content: '▼';
+      opacity: 1;
+    }
     tbody tr:hover {
       background: rgba(55, 65, 81, 0.55);
     }
@@ -195,11 +218,11 @@
       <thead>
         <tr>
           <th>Merchant</th>
-          <th>Enrollment Date</th>
-          <th>Monthly Amount (Total)</th>
+          <th class="sortable" data-column="enrollmentDate">Enrollment Date</th>
+          <th class="sortable" data-column="amount">Monthly Amount (Total)</th>
           <th>Total Installments (Out of)</th>
           <th>First Installment</th>
-          <th>Current Installment No.</th>
+          <th class="sortable" data-column="currentInstallment">Current Installment No.</th>
           <th>Remaining</th>
           <th>Actions</th>
         </tr>
@@ -367,6 +390,67 @@
       recomputeRowsAndCollectTimeline(billingDate, false);
     }
 
+    // ---- Sorting functionality ----
+    let currentSortColumn = null;
+    let currentSortDirection = 'asc';
+
+    function sortTable(column) {
+      const tbody = document.querySelector('#installmentsTable tbody');
+      const rows = Array.from(tbody.querySelectorAll('tr'));
+
+      // Toggle sort direction if clicking the same column
+      if (currentSortColumn === column) {
+        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSortColumn = column;
+        currentSortDirection = 'asc';
+      }
+
+      // Sort rows based on column
+      rows.sort((rowA, rowB) => {
+        let valA, valB;
+
+        if (column === 'enrollmentDate') {
+          const inputA = rowA.querySelectorAll('input')[1].value;
+          const inputB = rowB.querySelectorAll('input')[1].value;
+          valA = inputA ? new Date(inputA + 'T00:00:00').getTime() : 0;
+          valB = inputB ? new Date(inputB + 'T00:00:00').getTime() : 0;
+        } else if (column === 'amount') {
+          valA = parseFloat(rowA.querySelectorAll('input')[2].value) || 0;
+          valB = parseFloat(rowB.querySelectorAll('input')[2].value) || 0;
+        } else if (column === 'currentInstallment') {
+          valA = parseInt(rowA.querySelectorAll('td')[5].textContent) || 0;
+          valB = parseInt(rowB.querySelectorAll('td')[5].textContent) || 0;
+        }
+
+        if (currentSortDirection === 'asc') {
+          return valA - valB;
+        } else {
+          return valB - valA;
+        }
+      });
+
+      // Re-append rows in sorted order
+      rows.forEach(row => tbody.appendChild(row));
+
+      // Update header indicators
+      document.querySelectorAll('th.sortable').forEach(th => {
+        th.classList.remove('asc', 'desc');
+      });
+      const activeHeader = document.querySelector(`th.sortable[data-column="${column}"]`);
+      if (activeHeader) {
+        activeHeader.classList.add(currentSortDirection);
+      }
+    }
+
+    // Add click listeners to sortable headers
+    document.querySelectorAll('th.sortable').forEach(th => {
+      th.addEventListener('click', () => {
+        const column = th.getAttribute('data-column');
+        sortTable(column);
+      });
+    });
+
     // ---- Storage (table only, no billing month) ----
     function readTableData() {
       const rows = document.querySelectorAll('#installmentsTable tbody tr');
@@ -424,6 +508,7 @@
       const rows = document.querySelectorAll('#installmentsTable tbody tr');
       const totalsByMonth = new Map();
       const detailsByMonth = new Map(); // Store detailed breakdown per month
+      const merchantsByMonth = new Map(); // Store amounts by merchant per month
 
       rows.forEach((row) => {
         const cells = row.querySelectorAll('td');
@@ -506,17 +591,46 @@
             installmentNo: installmentNo,
             amount: amount
           });
+
+          // Store by merchant for stacked chart
+          if (!merchantsByMonth.has(key)) {
+            merchantsByMonth.set(key, new Map());
+          }
+          const monthMerchants = merchantsByMonth.get(key);
+          if (monthMerchants.has(merchantName)) {
+            monthMerchants.set(merchantName, monthMerchants.get(merchantName) + amount);
+          } else {
+            monthMerchants.set(merchantName, amount);
+          }
         }
       });
 
-      if (!collectTimeline) return { timeline: [], details: new Map() };
+      if (!collectTimeline) return { timeline: [], details: new Map(), merchants: new Map() };
 
       const sorted = Array.from(totalsByMonth.values()).sort((a, b) => a.date - b.date);
-      return { timeline: sorted, details: detailsByMonth };
+      return { timeline: sorted, details: detailsByMonth, merchants: merchantsByMonth };
     }
 
     let timelineChart = null;
     let currentTimelineDetails = new Map(); // Store details for click handling
+    let currentMerchantsByMonth = new Map(); // Store merchant data for chart
+
+    // Generate consistent colors for merchants
+    const merchantColors = new Map();
+    const colorPalette = [
+      '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
+      '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16',
+      '#06b6d4', '#f43f5e', '#22c55e', '#eab308', '#a855f7'
+    ];
+    let colorIndex = 0;
+
+    function getMerchantColor(merchant) {
+      if (!merchantColors.has(merchant)) {
+        merchantColors.set(merchant, colorPalette[colorIndex % colorPalette.length]);
+        colorIndex++;
+      }
+      return merchantColors.get(merchant);
+    }
 
     function calculateTimeline() {
       const billingMonthValue = document.getElementById('billingMonth').value;
@@ -529,27 +643,63 @@
       const result = recomputeRowsAndCollectTimeline(billingDate, true);
       const timelinePairs = result.timeline;
       currentTimelineDetails = result.details;
+      currentMerchantsByMonth = result.merchants;
 
       if (timelinePairs.length === 0) {
         alert('No installments found from this billing month onwards.');
-        updateChart([], []);
+        updateChart([], new Map(), []);
         hideMonthDetail();
         return;
       }
 
       const labels = timelinePairs.map(item => formatMonthLabel(item.date));
-      const data   = timelinePairs.map(item => Number(item.total.toFixed(2)));
 
-      updateChart(labels, data);
+      // Get all unique merchants
+      const allMerchants = new Set();
+      currentMerchantsByMonth.forEach(monthData => {
+        monthData.forEach((amount, merchant) => {
+          allMerchants.add(merchant);
+        });
+      });
+
+      updateChart(labels, currentMerchantsByMonth, timelinePairs);
       hideMonthDetail();
     }
 
-    function updateChart(labels, data) {
+    function updateChart(labels, merchantsByMonth, timelinePairs) {
       const ctx = document.getElementById('timelineChart').getContext('2d');
+
+      // Get all unique merchants
+      const allMerchants = new Set();
+      merchantsByMonth.forEach(monthData => {
+        monthData.forEach((amount, merchant) => {
+          allMerchants.add(merchant);
+        });
+      });
+
+      // Create datasets for each merchant
+      const datasets = [];
+      allMerchants.forEach(merchant => {
+        const data = [];
+        timelinePairs.forEach(item => {
+          const key = item.date.getFullYear() + '-' + String(item.date.getMonth() + 1).padStart(2, '0');
+          const monthData = merchantsByMonth.get(key);
+          const amount = monthData && monthData.has(merchant) ? monthData.get(merchant) : 0;
+          data.push(Number(amount.toFixed(2)));
+        });
+
+        datasets.push({
+          label: merchant || 'N/A',
+          data: data,
+          backgroundColor: getMerchantColor(merchant),
+          borderColor: getMerchantColor(merchant),
+          borderWidth: 1
+        });
+      });
 
       if (timelineChart) {
         timelineChart.data.labels = labels;
-        timelineChart.data.datasets[0].data = data;
+        timelineChart.data.datasets = datasets;
         timelineChart.update();
         return;
       }
@@ -558,10 +708,7 @@
         type: 'bar',
         data: {
           labels: labels,
-          datasets: [{
-            label: 'Total payment per month',
-            data: data
-          }]
+          datasets: datasets
         },
         options: {
           responsive: true,
@@ -574,27 +721,46 @@
           },
           plugins: {
             legend: {
+              display: true,
+              position: 'bottom',
               labels: {
-                color: '#e5e7eb'
+                color: '#e5e7eb',
+                padding: 10,
+                font: {
+                  size: 11
+                }
+              }
+            },
+            tooltip: {
+              mode: 'index',
+              intersect: false,
+              callbacks: {
+                label: function(context) {
+                  const label = context.dataset.label || '';
+                  const value = context.parsed.y;
+                  return label + ': ' + value.toFixed(2);
+                },
+                footer: function(tooltipItems) {
+                  let total = 0;
+                  tooltipItems.forEach(item => {
+                    total += item.parsed.y;
+                  });
+                  return 'Total: ' + total.toFixed(2);
+                }
               }
             },
             datalabels: {
-              anchor: 'end',
-              align: 'end',
-              color: '#e5e7eb',
-              font: {
-                weight: 'bold',
-                size: 10
-              },
-              formatter: (value) => value.toFixed(2)
+              display: false
             }
           },
           scales: {
             x: {
+              stacked: true,
               ticks: { color: '#e5e7eb' },
               grid: { color: '#374151' }
             },
             y: {
+              stacked: true,
               ticks: { color: '#e5e7eb' },
               grid: { color: '#374151' }
             }
