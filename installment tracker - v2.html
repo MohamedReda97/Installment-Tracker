@@ -50,6 +50,30 @@
       padding: 0.35rem 0.5rem;
       font-size: 0.9rem;
     }
+
+    /* Style for date inputs to show dd/mm/yyyy format */
+    input[type="date"]::-webkit-datetime-edit,
+    input[type="date"]::-webkit-inner-spin-button,
+    input[type="date"]::-webkit-clear-button {
+      display: none;
+    }
+
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      position: absolute;
+      right: 0.5rem;
+      color: #e5e7eb;
+      opacity: 0.7;
+    }
+
+    input[type="date"]::before {
+      content: attr(data-date);
+      color: #e5e7eb;
+    }
+
+    input[type="date"]:focus::before,
+    input[type="date"]:valid::before {
+      content: attr(data-date);
+    }
     input:focus {
       outline: none;
       border-color: #3b82f6;
@@ -347,6 +371,43 @@
       return `${y}-${m}-${day}`;
     }
 
+    function formatDateDMY(d) {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${day}/${m}/${y}`;
+    }
+
+    function ymdToDMY(ymdStr) {
+      if (!ymdStr) return '';
+      const parts = ymdStr.split('-');
+      if (parts.length !== 3) return ymdStr;
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+
+    function dmyToYMD(dmyStr) {
+      if (!dmyStr) return '';
+      const parts = dmyStr.split('/');
+      if (parts.length !== 3) return dmyStr;
+      return `${parts[2]}-${parts[1]}-${parts[0]}`;
+    }
+
+    // Update date input to show dd/mm/yyyy format using title attribute
+    function setupDateInput(input) {
+      input.addEventListener('change', function() {
+        if (this.value) {
+          this.setAttribute('data-date', ymdToDMY(this.value));
+          this.style.setProperty('--date-display', `"${ymdToDMY(this.value)}"`);
+        }
+      });
+
+      // Set initial display if value exists
+      if (input.value) {
+        input.setAttribute('data-date', ymdToDMY(input.value));
+        input.style.setProperty('--date-display', `"${ymdToDMY(input.value)}"`);
+      }
+    }
+
     function deleteRow(btn) {
       const row = btn.closest('tr');
       if (row) row.remove();
@@ -365,12 +426,20 @@
       `;
       tbody.appendChild(tr);
 
+      const dateInput = tr.querySelectorAll('input')[1];
+      setupDateInput(dateInput);
+
       if (data) {
         const inputs = tr.querySelectorAll('input');
         inputs[0].value = data.merchant || '';
         inputs[1].value = data.enrollmentDate || '';
         inputs[2].value = data.amount || '';
         inputs[3].value = data.total || '';
+
+        // Update date display
+        if (data.enrollmentDate) {
+          dateInput.setAttribute('data-date', ymdToDMY(data.enrollmentDate));
+        }
       }
 
       // Add event listeners for auto-recalculation
@@ -738,6 +807,8 @@
                 label: function(context) {
                   const label = context.dataset.label || '';
                   const value = context.parsed.y;
+                  // Only show non-zero values
+                  if (value === 0) return null;
                   return label + ': ' + value.toFixed(2);
                 },
                 footer: function(tooltipItems) {
@@ -747,10 +818,26 @@
                   });
                   return 'Total: ' + total.toFixed(2);
                 }
+              },
+              filter: function(tooltipItem) {
+                // Filter out zero values from tooltip
+                return tooltipItem.parsed.y !== 0;
               }
             },
             datalabels: {
-              display: false
+              display: true,
+              color: '#ffffff',
+              font: {
+                weight: 'bold',
+                size: 10
+              },
+              formatter: function(value, context) {
+                // Only show label if value is not zero
+                if (value === 0) return '';
+                return value.toFixed(2);
+              },
+              anchor: 'center',
+              align: 'center'
             }
           },
           scales: {
@@ -877,6 +964,12 @@
       document.getElementById('billingMonth').value = `${year}-${month}`;
 
       loadTableFromStorage(); // لو فيه داتا محفوظة هتكتب مكان الـ sample rows
+
+      // Setup all date inputs to show dd/mm/yyyy format
+      const allDateInputs = document.querySelectorAll('input[type="date"]');
+      allDateInputs.forEach(input => {
+        setupDateInput(input);
+      });
 
       // Add event listeners to existing rows for auto-recalculation
       const existingAutoRecalcInputs = document.querySelectorAll('#installmentsTable .auto-recalc');
