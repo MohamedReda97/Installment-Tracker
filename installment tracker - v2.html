@@ -124,20 +124,23 @@
       width: 100%;
       box-sizing: border-box;
     }
-    #timelineSummaryTable {
-      margin-top: 1rem;
+    #monthDetailTable {
+      margin-top: 0.5rem;
       border-collapse: collapse;
       width: 100%;
       font-size: 0.85rem;
     }
-    #timelineSummaryTable th,
-    #timelineSummaryTable td {
+    #monthDetailTable th,
+    #monthDetailTable td {
       border-bottom: 1px solid #374151;
       padding: 0.3rem 0.4rem;
       text-align: left;
     }
-    #timelineSummaryTable th {
+    #monthDetailTable th {
       color: #9ca3af;
+    }
+    #monthDetailTable tbody tr:hover {
+      background: rgba(55, 65, 81, 0.55);
     }
     .small-hint {
       font-size: 0.8rem;
@@ -205,65 +208,65 @@
         <!-- Sample data based on the screenshot (year assumed 2024/2025) -->
         <tr>
           <td><input type="text" value="NOON 511.60" /></td>
-          <td><input type="date" value="2024-11-09" /></td>
+          <td><input type="date" class="auto-recalc" value="2024-11-09" /></td>
           <td><input type="number" step="0.01" value="511.60" /></td>
-          <td><input type="number" value="15" /></td>
+          <td><input type="number" class="auto-recalc" value="15" /></td>
           <td></td><td></td><td></td>
           <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
         </tr>
         <tr>
           <td><input type="text" value="NOON 183.95" /></td>
-          <td><input type="date" value="2024-11-09" /></td>
+          <td><input type="date" class="auto-recalc" value="2024-11-09" /></td>
           <td><input type="number" step="0.01" value="183.95" /></td>
-          <td><input type="number" value="15" /></td>
+          <td><input type="number" class="auto-recalc" value="15" /></td>
           <td></td><td></td><td></td>
           <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
         </tr>
         <tr>
           <td><input type="text" value="Amazon 387.16" /></td>
-          <td><input type="date" value="2024-11-17" /></td>
+          <td><input type="date" class="auto-recalc" value="2024-11-17" /></td>
           <td><input type="number" step="0.01" value="387.16" /></td>
-          <td><input type="number" value="18" /></td>
+          <td><input type="number" class="auto-recalc" value="18" /></td>
           <td></td><td></td><td></td>
           <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
         </tr>
         <tr>
           <td><input type="text" value="NOON 186.77" /></td>
-          <td><input type="date" value="2024-11-25" /></td>
+          <td><input type="date" class="auto-recalc" value="2024-11-25" /></td>
           <td><input type="number" step="0.01" value="186.77" /></td>
-          <td><input type="number" value="15" /></td>
+          <td><input type="number" class="auto-recalc" value="15" /></td>
           <td></td><td></td><td></td>
           <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
         </tr>
         <tr>
           <td><input type="text" value="Amazon 1474.94" /></td>
-          <td><input type="date" value="2025-02-17" /></td>
+          <td><input type="date" class="auto-recalc" value="2025-02-17" /></td>
           <td><input type="number" step="0.01" value="1474.94" /></td>
-          <td><input type="number" value="12" /></td>
+          <td><input type="number" class="auto-recalc" value="12" /></td>
           <td></td><td></td><td></td>
           <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
         </tr>
         <tr>
           <td><input type="text" value="NOON 634.90" /></td>
-          <td><input type="date" value="2025-10-01" /></td>
+          <td><input type="date" class="auto-recalc" value="2025-10-01" /></td>
           <td><input type="number" step="0.01" value="634.90" /></td>
-          <td><input type="number" value="10" /></td>
+          <td><input type="number" class="auto-recalc" value="10" /></td>
           <td></td><td></td><td></td>
           <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
         </tr>
         <tr>
           <td><input type="text" value="NOON 236.59" /></td>
-          <td><input type="date" value="2025-10-02" /></td>
+          <td><input type="date" class="auto-recalc" value="2025-10-02" /></td>
           <td><input type="number" step="0.01" value="236.59" /></td>
-          <td><input type="number" value="10" /></td>
+          <td><input type="number" class="auto-recalc" value="10" /></td>
           <td></td><td></td><td></td>
           <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
         </tr>
         <tr>
           <td><input type="text" value="NOON 109.63" /></td>
-          <td><input type="date" value="2025-10-04" /></td>
+          <td><input type="date" class="auto-recalc" value="2025-10-04" /></td>
           <td><input type="number" step="0.01" value="109.63" /></td>
-          <td><input type="number" value="10" /></td>
+          <td><input type="number" class="auto-recalc" value="10" /></td>
           <td></td><td></td><td></td>
           <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
         </tr>
@@ -281,16 +284,23 @@
 
   <div class="card">
     <h2>Monthly Payments Timeline</h2>
+    <div class="small-hint" style="margin-bottom: 0.5rem;">
+      Click on any bar to see installment details for that month.
+    </div>
     <canvas id="timelineChart" height="120"></canvas>
-    <table id="timelineSummaryTable">
-      <thead>
-        <tr>
-          <th>Month</th>
-          <th>Total Payment</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
+    <div id="monthDetailSection" style="display: none; margin-top: 1.5rem;">
+      <h3 id="monthDetailTitle" style="color: #f9fafb; margin-bottom: 0.5rem;"></h3>
+      <table id="monthDetailTable">
+        <thead>
+          <tr>
+            <th>Merchant</th>
+            <th>Installment No.</th>
+            <th>Amount</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
   </div>
 
   <script>
@@ -324,9 +334,9 @@
       const tr = document.createElement('tr');
       tr.innerHTML = `
         <td><input type="text" placeholder="Merchant" /></td>
-        <td><input type="date" /></td>
+        <td><input type="date" class="auto-recalc" /></td>
         <td><input type="number" step="0.01" placeholder="Amount" /></td>
-        <td><input type="number" placeholder="Total" /></td>
+        <td><input type="number" placeholder="Total" class="auto-recalc" /></td>
         <td></td><td></td><td></td>
         <td><button class="danger" type="button" onclick="deleteRow(this)">Delete</button></td>
       `;
@@ -339,9 +349,23 @@
         inputs[2].value = data.amount || '';
         inputs[3].value = data.total || '';
       }
+
+      // Add event listeners for auto-recalculation
+      const autoRecalcInputs = tr.querySelectorAll('.auto-recalc');
+      autoRecalcInputs.forEach(input => {
+        input.addEventListener('change', triggerRecalculation);
+      });
     }
 
     document.getElementById('addRowBtn').addEventListener('click', () => addRow());
+
+    // Trigger recalculation when enrollment date or total installments change
+    function triggerRecalculation() {
+      const val = document.getElementById('billingMonth').value;
+      if (!val) return;
+      const billingDate = new Date(val + '-01T00:00:00');
+      recomputeRowsAndCollectTimeline(billingDate, false);
+    }
 
     // ---- Storage (table only, no billing month) ----
     function readTableData() {
@@ -399,11 +423,13 @@
     function recomputeRowsAndCollectTimeline(billingDate, collectTimeline) {
       const rows = document.querySelectorAll('#installmentsTable tbody tr');
       const totalsByMonth = new Map();
+      const detailsByMonth = new Map(); // Store detailed breakdown per month
 
       rows.forEach((row) => {
         const cells = row.querySelectorAll('td');
         if (cells.length < 7) return;
 
+        const merchantInput   = cells[0].querySelector('input');
         const enrollmentInput = cells[1].querySelector('input');
         const amountInput     = cells[2].querySelector('input');
         const totalInput      = cells[3].querySelector('input');
@@ -415,6 +441,7 @@
         currentCell.textContent = '';
         remainingCell.textContent = '';
 
+        const merchantName = merchantInput.value.trim();
         const enrollmentVal = enrollmentInput.value;
         const amount = parseFloat(amountInput.value);
         const totalInst = parseInt(totalInput.value, 10);
@@ -461,22 +488,35 @@
           const payDate = addMonthsToDate(firstInstallDate, k);
           if (payDate < billingDate) continue;
 
+          const installmentNo = k + 1;
           const key = payDate.getFullYear() + '-' + String(payDate.getMonth() + 1).padStart(2, '0');
+
           if (totalsByMonth.has(key)) {
             totalsByMonth.get(key).total += amount;
           } else {
             totalsByMonth.set(key, { date: payDate, total: amount });
           }
+
+          // Store detailed breakdown
+          if (!detailsByMonth.has(key)) {
+            detailsByMonth.set(key, []);
+          }
+          detailsByMonth.get(key).push({
+            merchant: merchantName || 'N/A',
+            installmentNo: installmentNo,
+            amount: amount
+          });
         }
       });
 
-      if (!collectTimeline) return [];
+      if (!collectTimeline) return { timeline: [], details: new Map() };
 
       const sorted = Array.from(totalsByMonth.values()).sort((a, b) => a.date - b.date);
-      return sorted;
+      return { timeline: sorted, details: detailsByMonth };
     }
 
     let timelineChart = null;
+    let currentTimelineDetails = new Map(); // Store details for click handling
 
     function calculateTimeline() {
       const billingMonthValue = document.getElementById('billingMonth').value;
@@ -486,11 +526,14 @@
       }
       const billingDate = new Date(billingMonthValue + '-01T00:00:00');
 
-      const timelinePairs = recomputeRowsAndCollectTimeline(billingDate, true);
+      const result = recomputeRowsAndCollectTimeline(billingDate, true);
+      const timelinePairs = result.timeline;
+      currentTimelineDetails = result.details;
+
       if (timelinePairs.length === 0) {
         alert('No installments found from this billing month onwards.');
         updateChart([], []);
-        updateTimelineTable([]);
+        hideMonthDetail();
         return;
       }
 
@@ -498,7 +541,7 @@
       const data   = timelinePairs.map(item => Number(item.total.toFixed(2)));
 
       updateChart(labels, data);
-      updateTimelineTable(timelinePairs);
+      hideMonthDetail();
     }
 
     function updateChart(labels, data) {
@@ -522,6 +565,13 @@
         },
         options: {
           responsive: true,
+          onClick: (event, activeElements) => {
+            if (activeElements.length > 0) {
+              const index = activeElements[0].index;
+              const monthLabel = timelineChart.data.labels[index];
+              showMonthDetail(monthLabel);
+            }
+          },
           plugins: {
             legend: {
               labels: {
@@ -554,21 +604,70 @@
       });
     }
 
-    function updateTimelineTable(timelinePairs) {
-      const tbody = document.querySelector('#timelineSummaryTable tbody');
+    function showMonthDetail(monthLabel) {
+      // Parse the month label to get the key (YYYY-MM format)
+      const billingMonthValue = document.getElementById('billingMonth').value;
+      const billingDate = new Date(billingMonthValue + '-01T00:00:00');
+
+      // Find the matching key in currentTimelineDetails
+      let matchingKey = null;
+      for (const [key, details] of currentTimelineDetails.entries()) {
+        const keyDate = new Date(key + '-01T00:00:00');
+        const keyLabel = formatMonthLabel(keyDate);
+        if (keyLabel === monthLabel) {
+          matchingKey = key;
+          break;
+        }
+      }
+
+      if (!matchingKey || !currentTimelineDetails.has(matchingKey)) {
+        return;
+      }
+
+      const details = currentTimelineDetails.get(matchingKey);
+      const tbody = document.querySelector('#monthDetailTable tbody');
       tbody.innerHTML = '';
 
-      timelinePairs.forEach((item) => {
+      let totalAmount = 0;
+      details.forEach((item) => {
         const tr = document.createElement('tr');
-        const monthStr = formatMonthLabel(item.date);
-        const tdMonth = document.createElement('td');
-        const tdTotal = document.createElement('td');
-        tdMonth.textContent = monthStr;
-        tdTotal.textContent = item.total.toFixed(2);
-        tr.appendChild(tdMonth);
-        tr.appendChild(tdTotal);
+        const tdMerchant = document.createElement('td');
+        const tdInstNo = document.createElement('td');
+        const tdAmount = document.createElement('td');
+
+        tdMerchant.textContent = item.merchant;
+        tdInstNo.textContent = item.installmentNo;
+        tdAmount.textContent = item.amount.toFixed(2);
+
+        tr.appendChild(tdMerchant);
+        tr.appendChild(tdInstNo);
+        tr.appendChild(tdAmount);
         tbody.appendChild(tr);
+
+        totalAmount += item.amount;
       });
+
+      // Add total row
+      const totalRow = document.createElement('tr');
+      totalRow.style.fontWeight = 'bold';
+      totalRow.style.borderTop = '2px solid #374151';
+      const tdMerchantTotal = document.createElement('td');
+      const tdInstNoTotal = document.createElement('td');
+      const tdAmountTotal = document.createElement('td');
+      tdMerchantTotal.textContent = 'Total';
+      tdInstNoTotal.textContent = '';
+      tdAmountTotal.textContent = totalAmount.toFixed(2);
+      totalRow.appendChild(tdMerchantTotal);
+      totalRow.appendChild(tdInstNoTotal);
+      totalRow.appendChild(tdAmountTotal);
+      tbody.appendChild(totalRow);
+
+      document.getElementById('monthDetailTitle').textContent = `Installments for ${monthLabel}`;
+      document.getElementById('monthDetailSection').style.display = 'block';
+    }
+
+    function hideMonthDetail() {
+      document.getElementById('monthDetailSection').style.display = 'none';
     }
 
     document.getElementById('calculateBtn').addEventListener('click', calculateTimeline);
@@ -612,6 +711,12 @@
       document.getElementById('billingMonth').value = `${year}-${month}`;
 
       loadTableFromStorage(); // لو فيه داتا محفوظة هتكتب مكان الـ sample rows
+
+      // Add event listeners to existing rows for auto-recalculation
+      const existingAutoRecalcInputs = document.querySelectorAll('#installmentsTable .auto-recalc');
+      existingAutoRecalcInputs.forEach(input => {
+        input.addEventListener('change', triggerRecalculation);
+      });
 
       const billingDate = new Date(`${year}-${month}-01T00:00:00`);
       recomputeRowsAndCollectTimeline(billingDate, false);
