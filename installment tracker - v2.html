@@ -254,10 +254,13 @@
           <button class="secondary" id="increaseMonthBtn" type="button" title="Next month">▶</button>
         </div>
       </div>
-      <div style="flex: 1 1 auto;"></div>
+      <div style="flex: 1 1 auto;">
+        <span id="autoSaveStatus" style="color: #6b7280; font-size: 0.875rem; font-style: italic;"></span>
+      </div>
       <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
         <button class="secondary" id="addRowBtn" type="button">＋ Add row</button>
-        <button class="secondary" id="saveDataBtn" type="button">💾 Save Data</button>
+        <button class="secondary" id="saveDataBtn" type="button">💾 Save to File</button>
+        <button class="secondary" id="importDataBtn" type="button">📤 Import from File</button>
       </div>
     </div>
 
@@ -375,6 +378,7 @@
 
   <script>
     const STORAGE_KEY = 'installmentsTableData_v5';
+    const JSON_FILENAME = 'installments-data.json';
 
     function addMonthsToDate(dateObj, months) {
       const d = new Date(dateObj.getTime());
@@ -497,7 +501,10 @@
 
     function deleteRow(btn) {
       const row = btn.closest('tr');
-      if (row) row.remove();
+      if (row) {
+        row.remove();
+        autoSaveToStorage(); // Auto-save after deletion
+      }
     }
 
     function addRow(data) {
@@ -561,10 +568,16 @@
 
       tbody.appendChild(tr);
 
-      // Add event listeners for auto-recalculation
+      // Add event listeners for auto-recalculation and auto-save
       const autoRecalcInputs = tr.querySelectorAll('.auto-recalc');
       autoRecalcInputs.forEach(input => {
         input.addEventListener('change', triggerRecalculation);
+      });
+
+      // Add auto-save listeners to all inputs
+      const allInputs = tr.querySelectorAll('input');
+      allInputs.forEach(input => {
+        input.addEventListener('change', autoSaveToStorage);
       });
     }
 
@@ -672,31 +685,197 @@
       dataArray.forEach((row) => addRow(row));
     }
 
+    // ---- File-based Storage ----
+
+    // Main save function - uses File System Access API when available
+    function saveDataToFile() {
+      // Check if File System Access API is available (Chrome/Edge 86+)
+      if ('showSaveFilePicker' in window) {
+        saveDataWithFilePicker();
+      } else {
+        saveDataWithDownload();
+      }
+    }
+
+    // Modern approach: File System Access API (allows saving to specific location)
+    async function saveDataWithFilePicker() {
+      try {
+        const rowsData = readTableData();
+        const jsonData = {
+          version: 'v2',
+          savedAt: new Date().toISOString(),
+          data: rowsData
+        };
+
+        // Show file picker dialog
+        const fileHandle = await window.showSaveFilePicker({
+          suggestedName: JSON_FILENAME,
+          types: [{
+            description: 'JSON Files',
+            accept: { 'application/json': ['.json'] }
+          }]
+        });
+
+        // Write to the selected file
+        const writable = await fileHandle.createWritable();
+        await writable.write(JSON.stringify(jsonData, null, 2));
+        await writable.close();
+
+        // Also save to localStorage as backup
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(rowsData));
+        updateAutoSaveStatus();
+
+        alert('✅ Data saved successfully!\n💾 Also saved to browser storage');
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          // User cancelled the file picker - do nothing
+          return;
+        }
+        console.error('Error with file picker:', err);
+        // Fall back to regular download if file picker fails
+        saveDataWithDownload();
+      }
+    }
+
+    // Fallback approach: Regular download (for browsers without File System Access API)
+    function saveDataWithDownload() {
+      try {
+        const rowsData = readTableData();
+        const jsonData = {
+          version: 'v2',
+          savedAt: new Date().toISOString(),
+          data: rowsData
+        };
+
+        const jsonString = JSON.stringify(jsonData, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = JSON_FILENAME;
+        a.click();
+
+        URL.revokeObjectURL(url);
+
+        // Also save to localStorage as backup
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(rowsData));
+        updateAutoSaveStatus();
+
+        alert(
+          '✅ Data saved to file: ' + JSON_FILENAME + '\n' +
+          '💾 Also saved to browser storage\n\n' +
+          '📁 File saved to your Downloads folder.\n' +
+          'TIP: Move it to the same folder as this HTML file for easy access.'
+        );
+      } catch (err) {
+        console.error('Error saving data:', err);
+        alert('❌ Error saving data: ' + err.message);
+      }
+    }
+
+    function importDataFromFile() {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.json';
+
+      input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          try {
+            const jsonData = JSON.parse(event.target.result);
+
+            // Handle both old format (array) and new format (object with metadata)
+            let data;
+            if (Array.isArray(jsonData)) {
+              data = jsonData;
+            } else if (jsonData.data && Array.isArray(jsonData.data)) {
+              data = jsonData.data;
+            } else {
+              throw new Error('Invalid data format');
+            }
+
+            writeTableData(data);
+
+            // Also save to localStorage
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+            // Recalculate after import
+            const billingInput = document.getElementById('billingMonth');
+            if (billingInput.value) {
+              const billingDate = new Date(billingInput.value + '-01T00:00:00');
+              recomputeRowsAndCollectTimeline(billingDate, false);
+            }
+
+            alert('✅ Data imported successfully from: ' + file.name);
+          } catch (err) {
+            console.error('Error importing data:', err);
+            alert('❌ Error importing file: ' + err.message);
+          }
+        };
+
+        reader.onerror = () => {
+          alert('❌ Error reading file');
+        };
+
+        reader.readAsText(file);
+      };
+
+      input.click();
+    }
+
+    // Legacy localStorage functions (kept for backward compatibility)
     function saveTableToStorage() {
       try {
         const rowsData = readTableData();
         localStorage.setItem(STORAGE_KEY, JSON.stringify(rowsData));
-        alert('Data saved locally ✔');
       } catch (err) {
-        console.error('Error saving data:', err);
-        alert('Error saving data (check console).');
+        console.error('Error saving to localStorage:', err);
       }
     }
 
     function loadTableFromStorage() {
       try {
         const raw = localStorage.getItem(STORAGE_KEY);
-        if (!raw) return;
+        if (!raw) return false;
         const data = JSON.parse(raw);
         if (Array.isArray(data)) {
           writeTableData(data);
+          return true;
         }
+        return false;
       } catch (err) {
-        console.error('Error loading data:', err);
+        console.error('Error loading from localStorage:', err);
+        return false;
       }
     }
 
-    document.getElementById('saveDataBtn').addEventListener('click', saveTableToStorage);
+    // Auto-save to localStorage on any change
+    function autoSaveToStorage() {
+      saveTableToStorage();
+      updateAutoSaveStatus();
+    }
+
+    function updateAutoSaveStatus() {
+      const statusEl = document.getElementById('autoSaveStatus');
+      if (statusEl) {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString();
+        statusEl.textContent = `Auto-saved at ${timeStr}`;
+        statusEl.style.color = '#10b981'; // Green
+
+        // Fade back to gray after 2 seconds
+        setTimeout(() => {
+          statusEl.style.color = '#6b7280';
+        }, 2000);
+      }
+    }
+
+    document.getElementById('saveDataBtn').addEventListener('click', saveDataToFile);
+    document.getElementById('importDataBtn').addEventListener('click', importDataFromFile);
 
     // ---- Core calculations ----
 
@@ -1103,6 +1282,27 @@
       });
     }
 
+    // Show import prompt if no data exists
+    function promptImportIfNeeded() {
+      const hasLocalData = localStorage.getItem(STORAGE_KEY);
+      const hasTableData = document.querySelectorAll('#installmentsTable tbody tr').length > 0;
+
+      if (!hasLocalData && !hasTableData) {
+        // No data found, offer to import
+        setTimeout(() => {
+          const shouldImport = confirm(
+            '📂 No saved data found.\n\n' +
+            'Would you like to import data from a JSON file?\n\n' +
+            '(Click "Cancel" to start with sample data)'
+          );
+
+          if (shouldImport) {
+            importDataFromFile();
+          }
+        }, 500); // Small delay to let page fully load
+      }
+    }
+
     // init: Billing month = الشهر الحالي + تحميل الجدول من التخزين + حساب الأعمدة
     (function init() {
       const now = new Date();
@@ -1110,19 +1310,30 @@
       const month = String(now.getMonth() + 1).padStart(2, '0');
       document.getElementById('billingMonth').value = `${year}-${month}`;
 
-      loadTableFromStorage(); // لو فيه داتا محفوظة هتكتب مكان الـ sample rows
+      const dataLoaded = loadTableFromStorage(); // لو فيه داتا محفوظة هتكتب مكان الـ sample rows
 
       // Convert existing date inputs to wrappers
       convertExistingDateInputs();
 
-      // Add event listeners to existing rows for auto-recalculation
+      // Add event listeners to existing rows for auto-recalculation and auto-save
       const existingAutoRecalcInputs = document.querySelectorAll('#installmentsTable .auto-recalc');
       existingAutoRecalcInputs.forEach(input => {
         input.addEventListener('change', triggerRecalculation);
       });
 
+      // Add auto-save to all existing inputs
+      const allExistingInputs = document.querySelectorAll('#installmentsTable input');
+      allExistingInputs.forEach(input => {
+        input.addEventListener('change', autoSaveToStorage);
+      });
+
       const billingDate = new Date(`${year}-${month}-01T00:00:00`);
       recomputeRowsAndCollectTimeline(billingDate, false);
+
+      // Prompt for import if no data exists
+      if (!dataLoaded) {
+        promptImportIfNeeded();
+      }
     })();
   </script>
 </body>
