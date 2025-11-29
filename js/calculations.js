@@ -1,28 +1,5 @@
 // Calculation Functions
 
-// Format date as YYYY-MM
-function formatDateYMD(dateObj) {
-  if (typeof dateObj === 'string') {
-    return dateObj;
-  }
-  const y = dateObj.getFullYear();
-  const m = String(dateObj.getMonth() + 1).padStart(2, '0');
-  return `${y}-${m}`;
-}
-
-// Add months to date object
-function addMonthsToDate(dateObj, numMonths) {
-  const d = new Date(dateObj);
-  d.setMonth(d.getMonth() + numMonths);
-  return d;
-}
-
-// Format month label for chart
-function formatMonthLabel(dateObj) {
-  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return monthNames[dateObj.getMonth()] + ' ' + dateObj.getFullYear();
-}
-
 // Main calculation function
 function recomputeRowsAndCollectTimeline(billingDate, collectTimeline) {
   const rows = document.querySelectorAll('#installmentsTable tbody tr');
@@ -32,12 +9,19 @@ function recomputeRowsAndCollectTimeline(billingDate, collectTimeline) {
 
   rows.forEach((row) => {
     const cells = row.querySelectorAll('td');
-    if (cells.length < 4) return;
+    if (cells.length < 7) return;
 
     const merchantInput = cells[0].querySelector('input');
     const enrollmentVal = getDateValue(cells[1]);
     const amountInput = cells[2].querySelector('input');
     const totalInput = cells[3].querySelector('input');
+    const firstCell = cells[4];
+    const currentCell = cells[5];
+    const remainingCell = cells[6];
+
+    firstCell.textContent = '';
+    currentCell.textContent = '';
+    remainingCell.textContent = '';
 
     const merchantName = merchantInput ? merchantInput.value.trim() : '';
     const amount = parseFloat(amountInput ? amountInput.value : 0);
@@ -59,6 +43,7 @@ function recomputeRowsAndCollectTimeline(billingDate, collectTimeline) {
 
     // First installment date = 1st of month after firstBillingMonth
     const firstInstallDate = addMonthsToDate(firstBillingMonth, 1);
+    firstCell.textContent = formatDateDMY(firstInstallDate);
 
     // Current installment number at billingMonth
     let currentInst = 0;
@@ -72,19 +57,8 @@ function recomputeRowsAndCollectTimeline(billingDate, collectTimeline) {
       remaining = Math.max(0, totalInst - currentInst);
     }
 
-    // Update calculated columns in the table
-    // Column 4: First Installment (formatted as dd/mm/yyyy)
-    if (cells[4]) {
-      cells[4].textContent = formatDateDMY(firstInstallDate);
-    }
-    // Column 5: Current Installment No.
-    if (cells[5]) {
-      cells[5].textContent = currentInst > 0 ? currentInst : '';
-    }
-    // Column 6: Remaining
-    if (cells[6]) {
-      cells[6].textContent = remaining > 0 ? remaining : '';
-    }
+    currentCell.textContent = currentInst.toString();
+    remainingCell.textContent = remaining.toString();
 
     if (!collectTimeline || remaining <= 0) return;
 
@@ -153,12 +127,8 @@ function calculateTimeline() {
   }
 
   const labels = timelinePairs.map(item => formatMonthLabel(item.date));
-  const monthKeys = timelinePairs.map(item => {
-    const d = item.date;
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
-  });
 
-  updateChart(labels, currentMerchantsByMonth, monthKeys);
+  updateChart(labels, currentMerchantsByMonth, timelinePairs);
   hideMonthDetail();
 }
 

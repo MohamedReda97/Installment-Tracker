@@ -21,7 +21,7 @@ function getMerchantColor(merchant) {
   return merchantColors.get(merchant);
 }
 
-function updateChart(labels, merchantsByMonth, monthKeys) {
+function updateChart(labels, merchantsByMonth, timelinePairs) {
   const ctx = document.getElementById('timelineChart').getContext('2d');
 
   // Get all unique merchants
@@ -36,7 +36,8 @@ function updateChart(labels, merchantsByMonth, monthKeys) {
   const datasets = [];
   allMerchants.forEach(merchant => {
     const data = [];
-    monthKeys.forEach(key => {
+    timelinePairs.forEach(item => {
+      const key = item.date.getFullYear() + '-' + String(item.date.getMonth() + 1).padStart(2, '0');
       const monthData = merchantsByMonth.get(key);
       const amount = monthData && monthData.has(merchant) ? monthData.get(merchant) : 0;
       data.push(Number(amount.toFixed(2)));
@@ -158,34 +159,35 @@ function showMonthDetail(monthLabel) {
   }
 
   const details = currentTimelineDetails.get(matchingKey);
-
-  document.getElementById('detailTitle').textContent = `Payment Details for ${monthLabel}`;
-
-  const tbody = document.querySelector('#detailTable tbody');
+  const tbody = document.querySelector('#monthDetailTable tbody');
   tbody.innerHTML = '';
 
-  details.forEach(item => {
+  let totalAmount = 0;
+  details.forEach((item) => {
     const tr = document.createElement('tr');
+    const tdMerchant = document.createElement('td');
+    const tdInstNo = document.createElement('td');
+    const tdAmount = document.createElement('td');
 
-    const td1 = document.createElement('td');
-    td1.textContent = item.merchant;
+    tdMerchant.textContent = item.merchant;
+    tdInstNo.textContent = item.installmentNo;
+    tdAmount.textContent = item.amount.toFixed(2);
 
-    const td2 = document.createElement('td');
-    td2.textContent = item.installmentNo;
-
-    const td3 = document.createElement('td');
-    td3.textContent = item.amount.toFixed(2);
-
-    tr.appendChild(td1);
-    tr.appendChild(td2);
-    tr.appendChild(td3);
+    tr.appendChild(tdMerchant);
+    tr.appendChild(tdInstNo);
+    tr.appendChild(tdAmount);
     tbody.appendChild(tr);
+
+    totalAmount += item.amount;
   });
 
-  document.getElementById('detailCard').style.display = 'block';
+  document.getElementById('monthDetailTotal').textContent = totalAmount.toFixed(2);
+  document.getElementById('monthDetailTitle').textContent = `Installments for ${monthLabel}`;
+  document.getElementById('monthDetailCard').style.display = 'block';
 }
 
 function hideMonthDetail() {
-  document.getElementById('detailCard').style.display = 'none';
+  document.getElementById('monthDetailCard').style.display = 'none';
 }
+
 
