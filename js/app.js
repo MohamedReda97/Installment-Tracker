@@ -1,7 +1,25 @@
 // Main Application Initialization
 
+// Handle sign out
+async function handleSignOut() {
+  const result = await signOut();
+  if (result.success) {
+    // Clear table
+    document.querySelector('#installmentsTable tbody').innerHTML = '';
+    // Reload page to reset state
+    window.location.reload();
+  }
+}
+
 (function init() {
   console.log('🚀 Initializing Installment Tracker...');
+
+  // Initialize Firebase
+  const firebaseInitialized = initializeFirebase();
+  if (!firebaseInitialized) {
+    alert('❌ Failed to initialize Firebase. Please check your internet connection.');
+    return;
+  }
 
   // Set current month as default billing month
   const now = new Date();
@@ -9,29 +27,80 @@
   const month = String(now.getMonth() + 1).padStart(2, '0');
   document.getElementById('billingMonth').value = `${year}-${month}`;
 
-  // Load data from localStorage
-  console.log('📥 Loading data...');
-  const dataLoaded = loadTableFromStorage();
+  // Listen for auth state changes
+  onAuthStateChanged(async (user) => {
+    console.log('🔐 Auth state changed:', user ? user.email : 'No user');
+    updateAuthUI(user);
 
-  // Convert existing date inputs to wrappers
-  convertExistingDateInputs();
+    if (user) {
+      // User is signed in, load their data
+      console.log('📥 Loading user data...');
+      let dataLoaded = false;
 
-  // Add event listeners to existing rows
-  const existingAutoRecalcInputs = document.querySelectorAll('#installmentsTable .auto-recalc');
-  existingAutoRecalcInputs.forEach(input => {
-    input.addEventListener('change', triggerRecalculation);
-  });
+      if (typeof loadUserDataFromFirestore === 'function') {
+        dataLoaded = await loadUserDataFromFirestore();
+      }
 
-  const allExistingInputs = document.querySelectorAll('#installmentsTable input');
-  allExistingInputs.forEach(input => {
-    input.addEventListener('change', autoSaveToStorage);
+      // Convert existing date inputs to wrappers
+      if (typeof convertExistingDateInputs === 'function') {
+        convertExistingDateInputs();
+      }
+
+      // Add event listeners to existing rows
+      const existingAutoRecalcInputs = document.querySelectorAll('#installmentsTable .auto-recalc');
+      existingAutoRecalcInputs.forEach(input => {
+        if (typeof triggerRecalculation === 'function') {
+          input.addEventListener('change', triggerRecalculation);
+        }
+      });
+
+      const allExistingInputs = document.querySelectorAll('#installmentsTable input');
+      allExistingInputs.forEach(input => {
+        if (typeof autoSaveToStorage === 'function') {
+          input.addEventListener('change', autoSaveToStorage);
+        }
+      });
+
+      // Initial calculation
+      const billingDate = new Date(`${year}-${month}-01T00:00:00`);
+      if (typeof recomputeRowsAndCollectTimeline === 'function') {
+        recomputeRowsAndCollectTimeline(billingDate, false);
+      }
+
+      // Prompt for import/migration if no data exists
+      if (!dataLoaded && typeof promptImportIfNeeded === 'function') {
+        await promptImportIfNeeded();
+      }
+
+      console.log('✅ User data loaded successfully!');
+    } else {
+      // User is signed out
+      console.log('👤 No user signed in');
+    }
   });
 
   // Event listeners for buttons
-  document.getElementById('addRowBtn').addEventListener('click', () => addRow());
-  document.getElementById('saveDataBtn').addEventListener('click', saveDataToFile);
-  document.getElementById('importDataBtn').addEventListener('click', importDataFromFile);
-  document.getElementById('calculateBtn').addEventListener('click', calculateTimeline);
+  document.getElementById('addRowBtn').addEventListener('click', () => {
+    addRow();
+    if (typeof autoSaveToStorage === 'function') {
+      autoSaveToStorage();
+    }
+  });
+  document.getElementById('saveDataBtn').addEventListener('click', () => {
+    if (typeof saveDataToFile === 'function') {
+      saveDataToFile();
+    }
+  });
+  document.getElementById('importDataBtn').addEventListener('click', () => {
+    if (typeof importDataFromFile === 'function') {
+      importDataFromFile();
+    }
+  });
+  document.getElementById('calculateBtn').addEventListener('click', () => {
+    if (typeof calculateTimeline === 'function') {
+      calculateTimeline();
+    }
+  });
 
   // Billing month change listener
   document.getElementById('billingMonth').addEventListener('change', () => {
@@ -71,15 +140,6 @@
       sortTable(column);
     });
   });
-
-  // Initial calculation
-  const billingDate = new Date(`${year}-${month}-01T00:00:00`);
-  recomputeRowsAndCollectTimeline(billingDate, false);
-
-  // Prompt for import if no data exists
-  if (!dataLoaded) {
-    promptImportIfNeeded();
-  }
 
   console.log('✅ Installment Tracker initialized successfully!');
 })();

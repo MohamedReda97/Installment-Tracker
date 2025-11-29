@@ -4,6 +4,10 @@
   <meta charset="UTF-8" />
   <title>Installments Timeline</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Data labels plugin -->
@@ -14,6 +18,28 @@
 <body>
   <h1>Installments Timeline</h1>
 
+  <!-- Authentication Section -->
+  <div class="card" id="authSection" style="display: none;">
+    <div style="text-align: center; padding: 2rem;">
+      <h2>Welcome to Installment Tracker</h2>
+      <p style="color: #9ca3af; margin-bottom: 1.5rem;">Sign in to sync your data across all devices</p>
+      <button class="primary" onclick="showLoginModal()">Sign In / Sign Up</button>
+    </div>
+  </div>
+
+  <!-- User Info Section -->
+  <div class="card" id="userSection" style="display: none;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+      <div>
+        <span style="color: #9ca3af;">Signed in as:</span>
+        <strong id="userEmail" style="color: #10b981; margin-left: 0.5rem;"></strong>
+      </div>
+      <button class="secondary" onclick="handleSignOut()">Sign Out</button>
+    </div>
+  </div>
+
+  <!-- Main App Content -->
+  <div id="appContent" style="display: none;">
   <div class="card">
     <div class="toolbar">
       <div>
@@ -80,8 +106,38 @@
       </table>
     </div>
   </div>
+  </div>
+  <!-- End of appContent -->
+
+  <!-- Authentication Modal -->
+  <div id="authModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; align-items: center; justify-content: center;">
+    <div style="background: #1f2933; border-radius: 12px; padding: 2rem; max-width: 400px; width: 90%; box-shadow: 0 20px 60px rgba(0,0,0,0.6);">
+      <h2 id="authTitle" style="margin-top: 0; color: #f9fafb;">Sign In</h2>
+      <form id="authForm" data-mode="signin" onsubmit="handleAuthSubmit(event)">
+        <div style="margin-bottom: 1rem;">
+          <label for="authEmail" style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Email</label>
+          <input type="email" id="authEmail" required style="width: 100%; padding: 0.75rem; background: #111827; border: 1px solid #374151; border-radius: 8px; color: #e5e7eb; font-size: 1rem;" />
+        </div>
+        <div style="margin-bottom: 1.5rem;">
+          <label for="authPassword" style="display: block; margin-bottom: 0.5rem; color: #9ca3af;">Password</label>
+          <input type="password" id="authPassword" required minlength="6" style="width: 100%; padding: 0.75rem; background: #111827; border: 1px solid #374151; border-radius: 8px; color: #e5e7eb; font-size: 1rem;" />
+          <small style="color: #6b7280; font-size: 0.85rem;">Minimum 6 characters</small>
+        </div>
+        <div id="authError" style="color: #ef4444; margin-bottom: 1rem; font-size: 0.9rem;"></div>
+        <div style="display: flex; gap: 0.75rem;">
+          <button type="submit" id="authSubmitBtn" class="primary" style="flex: 1;">Sign In</button>
+          <button type="button" class="secondary" onclick="hideLoginModal()">Cancel</button>
+        </div>
+      </form>
+      <div id="authToggleText" style="text-align: center; margin-top: 1.5rem; color: #9ca3af; font-size: 0.9rem;">
+        Don't have an account? <a href="#" id="authToggleLink" onclick="event.preventDefault(); toggleAuthMode();" style="color: #3b82f6; text-decoration: none;">Sign Up</a>
+      </div>
+    </div>
+  </div>
 
   <!-- JavaScript files in order -->
+  <script src="js/firebase-config.js"></script>
+  <script src="js/firebase-auth.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/table.js"></script>
