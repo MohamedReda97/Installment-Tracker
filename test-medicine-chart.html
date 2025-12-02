@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Medicine Chart</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      background: #111827;
+      color: #f9fafb;
+      font-family: system-ui, -apple-system, sans-serif;
+      padding: 2rem;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    canvas {
+      background: #1f2937;
+      border-radius: 8px;
+      padding: 1rem;
+    }
+    .info {
+      background: #1f2937;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-bottom: 1rem;
+    }
+    .legend {
+      display: flex;
+      gap: 2rem;
+      margin-top: 1rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .legend-color {
+      width: 20px;
+      height: 20px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Medicine Chart Test</h1>
+    
+    <div class="info">
+      <h3>Test Data:</h3>
+      <ul>
+        <li><strong>Vitamin D:</strong> 3 months active, 1 month pause (starts Jan 2025)</li>
+        <li><strong>Omega-3:</strong> 6 months active, 0 pause (starts Jan 2024)</li>
+        <li><strong>Aspirin:</strong> 2 months active, 2 months pause (starts Jan 2024)</li>
+      </ul>
+      
+      <div class="legend">
+        <div class="legend-item">
+          <div class="legend-color" style="background: #10b981;"></div>
+          <span>Active</span>
+        </div>
+        <div class="legend-item">
+          <div class="legend-color" style="background: #374151;"></div>
+          <span>Paused</span>
+        </div>
+      </div>
+    </div>
+    
+    <canvas id="testChart" height="300"></canvas>
+  </div>
+
+  <script>
+    // Test data
+    const testTimeline = [
+      {
+        name: 'Vitamin D',
+        months: [
+          { isActive: true },  // Jan
+          { isActive: true },  // Feb
+          { isActive: true },  // Mar
+          { isActive: false }, // Apr (pause)
+          { isActive: true },  // May
+          { isActive: true },  // Jun
+          { isActive: true },  // Jul
+          { isActive: false }, // Aug (pause)
+          { isActive: true },  // Sep
+          { isActive: true },  // Oct
+          { isActive: true },  // Nov
+          { isActive: false }  // Dec (pause)
+        ]
+      },
+      {
+        name: 'Omega-3',
+        months: [
+          { isActive: true },  // Jan
+          { isActive: true },  // Feb
+          { isActive: true },  // Mar
+          { isActive: true },  // Apr
+          { isActive: true },  // May
+          { isActive: true },  // Jun
+          { isActive: false }, // Jul (completed)
+          { isActive: false },
+          { isActive: false },
+          { isActive: false },
+          { isActive: false },
+          { isActive: false }
+        ]
+      },
+      {
+        name: 'Aspirin',
+        months: [
+          { isActive: true },  // Jan
+          { isActive: true },  // Feb
+          { isActive: false }, // Mar (pause)
+          { isActive: false }, // Apr (pause)
+          { isActive: true },  // May
+          { isActive: true },  // Jun
+          { isActive: false }, // Jul (pause)
+          { isActive: false }, // Aug (pause)
+          { isActive: true },  // Sep
+          { isActive: true },  // Oct
+          { isActive: false }, // Nov (pause)
+          { isActive: false }  // Dec (pause)
+        ]
+      }
+    ];
+
+    const monthLabels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    const ACTIVE_COLOR = '#10b981';
+    const PAUSED_COLOR = '#374151';
+
+    // Create datasets - one per medicine
+    const datasets = [];
+    testTimeline.forEach(medicine => {
+      const data = [];
+      const backgroundColor = [];
+
+      medicine.months.forEach(month => {
+        data.push(1);
+        backgroundColor.push(month.isActive ? ACTIVE_COLOR : PAUSED_COLOR);
+      });
+
+      datasets.push({
+        label: medicine.name,
+        data: data,
+        backgroundColor: backgroundColor,
+        borderWidth: 1
+      });
+    });
+
+    console.log('Datasets:', datasets.length);
+    console.log('Months:', monthLabels.length);
+
+    // Create chart
+    const ctx = document.getElementById('testChart').getContext('2d');
+    new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: monthLabels,
+        datasets: datasets
+      },
+      options: {
+        indexAxis: 'x',
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: true,
+            position: 'top',
+            labels: { color: '#9ca3af' }
+          }
+        },
+        scales: {
+          x: {
+            stacked: false,
+            grid: { color: '#374151' },
+            ticks: { color: '#9ca3af' }
+          },
+          y: {
+            stacked: false,
+            grid: { color: '#374151' },
+            ticks: { color: '#9ca3af' }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>
+

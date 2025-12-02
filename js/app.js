@@ -4,15 +4,60 @@
 async function handleSignOut() {
   const result = await signOut();
   if (result.success) {
-    // Clear table
+    // Clear tables
     document.querySelector('#installmentsTable tbody').innerHTML = '';
+    if (document.querySelector('#medicineTable tbody')) {
+      document.querySelector('#medicineTable tbody').innerHTML = '';
+    }
     // Reload page to reset state
     window.location.reload();
   }
 }
 
+// Initialize Installment Tracker Tab
+function initInstallmentsTab() {
+  console.log('📊 Initializing Installment Tracker tab...');
+
+  // Set current month as default billing month if not set
+  const billingMonthInput = document.getElementById('billingMonth');
+  if (!billingMonthInput.value) {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    billingMonthInput.value = `${year}-${month}`;
+  }
+
+  // Recalculate if there's data
+  const val = billingMonthInput.value;
+  if (val && typeof recomputeRowsAndCollectTimeline === 'function') {
+    const billingDate = new Date(val + '-01T00:00:00');
+    recomputeRowsAndCollectTimeline(billingDate, false);
+  }
+}
+
+// Initialize Medicine Tracker Tab
+async function initMedicineTab() {
+  console.log('💊 Initializing Medicine Tracker tab...');
+
+  // Load medicine data if function exists
+  if (typeof loadMedicineDataFromFirestore === 'function') {
+    const dataLoaded = await loadMedicineDataFromFirestore();
+
+    // If no data exists, add test data for development
+    if (!dataLoaded && typeof addMedicineTestData === 'function') {
+      console.log('📝 No medicine data found, adding test data...');
+      addMedicineTestData();
+    }
+  }
+
+  // Recalculate timeline if function exists
+  if (typeof calculateMedicineTimeline === 'function') {
+    calculateMedicineTimeline();
+  }
+}
+
 (function init() {
-  console.log('🚀 Initializing Installment Tracker...');
+  console.log('🚀 Initializing Personal Finance & Health Tracker...');
 
   // Initialize Firebase
   const firebaseInitialized = initializeFirebase();
@@ -27,14 +72,28 @@ async function handleSignOut() {
   const month = String(now.getMonth() + 1).padStart(2, '0');
   document.getElementById('billingMonth').value = `${year}-${month}`;
 
+  // Register tabs with tab manager
+  tabManager.registerTab('installments', initInstallmentsTab, null);
+  tabManager.registerTab('medicine', initMedicineTab, null);
+
   // Listen for auth state changes
   onAuthStateChanged(async (user) => {
     console.log('🔐 Auth state changed:', user ? user.email : 'No user');
     updateAuthUI(user);
 
     if (user) {
-      // User is signed in, load their data
+      // User is signed in, show tabs and load their data
       console.log('📥 Loading user data...');
+
+      // Show tab navigation
+      const tabNav = document.getElementById('tabNavigation');
+      if (tabNav) {
+        tabNav.style.display = 'flex';
+      }
+
+      // Initialize tab manager
+      tabManager.init();
+
       let dataLoaded = false;
 
       if (typeof loadUserDataFromFirestore === 'function') {
@@ -74,8 +133,12 @@ async function handleSignOut() {
 
       console.log('✅ User data loaded successfully!');
     } else {
-      // User is signed out
+      // User is signed out, hide tabs
       console.log('👤 No user signed in');
+      const tabNav = document.getElementById('tabNavigation');
+      if (tabNav) {
+        tabNav.style.display = 'none';
+      }
     }
   });
 
@@ -133,14 +196,72 @@ async function handleSignOut() {
     input.dispatchEvent(new Event('change'));
   });
 
-  // Sortable headers
-  document.querySelectorAll('th.sortable').forEach(th => {
+  // Sortable headers for installments table
+  document.querySelectorAll('#installmentsTable th.sortable').forEach(th => {
     th.addEventListener('click', () => {
       const column = th.getAttribute('data-column');
       sortTable(column);
     });
   });
 
-  console.log('✅ Installment Tracker initialized successfully!');
+  // Medicine Tracker Event Listeners (will be functional once medicine files are created)
+  const addMedicineBtn = document.getElementById('addMedicineRowBtn');
+  if (addMedicineBtn) {
+    addMedicineBtn.addEventListener('click', () => {
+      if (typeof addMedicineRow === 'function') {
+        addMedicineRow();
+        if (typeof autoSaveMedicineToStorage === 'function') {
+          autoSaveMedicineToStorage();
+        }
+      }
+    });
+  }
+
+  const saveMedicineBtn = document.getElementById('saveMedicineDataBtn');
+  if (saveMedicineBtn) {
+    saveMedicineBtn.addEventListener('click', () => {
+      if (typeof saveMedicineDataToFile === 'function') {
+        saveMedicineDataToFile();
+      }
+    });
+  }
+
+  const importMedicineBtn = document.getElementById('importMedicineDataBtn');
+  if (importMedicineBtn) {
+    importMedicineBtn.addEventListener('click', () => {
+      if (typeof importMedicineDataFromFile === 'function') {
+        importMedicineDataFromFile();
+      }
+    });
+  }
+
+  const calculateMedicineBtn = document.getElementById('calculateMedicineTimelineBtn');
+  if (calculateMedicineBtn) {
+    calculateMedicineBtn.addEventListener('click', () => {
+      if (typeof calculateMedicineTimeline === 'function') {
+        calculateMedicineTimeline();
+      }
+    });
+  }
+
+  const applyMedicineChangesBtn = document.getElementById('applyMedicineChangesBtn');
+  if (applyMedicineChangesBtn) {
+    applyMedicineChangesBtn.addEventListener('click', () => {
+      if (typeof applyMedicineChartChanges === 'function') {
+        applyMedicineChartChanges();
+      }
+    });
+  }
+
+  const revertMedicineChangesBtn = document.getElementById('revertMedicineChangesBtn');
+  if (revertMedicineChangesBtn) {
+    revertMedicineChangesBtn.addEventListener('click', () => {
+      if (typeof revertMedicineChartChanges === 'function') {
+        revertMedicineChartChanges();
+      }
+    });
+  }
+
+  console.log('✅ Personal Finance & Health Tracker initialized successfully!');
 })();
 

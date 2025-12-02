@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Medicine Calculations Test</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #2a2a2a;
+      border-radius: 8px;
+    }
+    .test-result {
+      margin: 10px 0;
+      padding: 10px;
+      background: #3a3a3a;
+      border-left: 4px solid #10b981;
+    }
+    .error {
+      border-left-color: #ef4444;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 10px 0;
+    }
+    th, td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #444;
+    }
+    th {
+      background: #333;
+    }
+    .active {
+      color: #10b981;
+      font-weight: bold;
+    }
+    .paused {
+      color: #6b7280;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Medicine Calculations Test</h1>
+  
+  <div class="test-section">
+    <h2>Test Data</h2>
+    <div id="testData"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Timeline Generation Test</h2>
+    <div id="timelineTest"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Cycle Logic Test</h2>
+    <div id="cycleTest"></div>
+  </div>
+  
+  <div class="test-section">
+    <h2>Time Sorting Test</h2>
+    <div id="sortingTest"></div>
+  </div>
+
+  <script src="js/medicine/medicine-calculations.js"></script>
+  <script>
+    // Test data
+    const testMedicines = [
+      {
+        id: 'test_1',
+        name: 'Vitamin D',
+        dose: '5000 IU',
+        time: 'Breakfast',
+        startDate: '2024-01-15',
+        duration: 3,
+        pause: 1,
+        notes: 'Take with food'
+      },
+      {
+        id: 'test_2',
+        name: 'Aspirin',
+        dose: '81mg',
+        time: 'Morning',
+        startDate: '2024-01-01',
+        duration: 2,
+        pause: 2,
+        notes: 'Low dose'
+      },
+      {
+        id: 'test_3',
+        name: 'Omega-3',
+        dose: '1000mg',
+        time: 'Dinner',
+        startDate: '2024-02-01',
+        duration: 6,
+        pause: 0,
+        notes: 'Fish oil'
+      }
+    ];
+
+    // Display test data
+    document.getElementById('testData').innerHTML = `
+      <table>
+        <tr>
+          <th>Name</th>
+          <th>Time</th>
+          <th>Start Date</th>
+          <th>Duration</th>
+          <th>Pause</th>
+        </tr>
+        ${testMedicines.map(m => `
+          <tr>
+            <td>${m.name}</td>
+            <td>${m.time}</td>
+            <td>${m.startDate}</td>
+            <td>${m.duration} months</td>
+            <td>${m.pause} months</td>
+          </tr>
+        `).join('')}
+      </table>
+    `;
+
+    // Test timeline generation
+    try {
+      const timeline = generateMedicineTimeline(testMedicines, new Date(2024, 0, 1), 12);
+      
+      let html = '<div class="test-result">✅ Timeline generated successfully</div>';
+      html += `<p>Generated ${timeline.length} medicine timelines</p>`;
+      
+      timeline.forEach(med => {
+        html += `<h3>${med.name} (${med.time})</h3>`;
+        html += '<table><tr>';
+        med.months.slice(0, 12).forEach(month => {
+          html += `<td class="${month.isActive ? 'active' : 'paused'}">${month.monthDisplay.split(' ')[0]}</td>`;
+        });
+        html += '</tr><tr>';
+        med.months.slice(0, 12).forEach(month => {
+          html += `<td class="${month.isActive ? 'active' : 'paused'}">${month.status}</td>`;
+        });
+        html += '</tr></table>';
+      });
+      
+      document.getElementById('timelineTest').innerHTML = html;
+    } catch (error) {
+      document.getElementById('timelineTest').innerHTML = `<div class="test-result error">❌ Error: ${error.message}</div>`;
+    }
+
+    // Test cycle logic
+    try {
+      const cycles = calculateMedicineCycles(testMedicines[0], 12);
+      let html = '<div class="test-result">✅ Cycle calculation successful</div>';
+      html += `<p>Testing: ${testMedicines[0].name} (${testMedicines[0].duration} months active, ${testMedicines[0].pause} months pause)</p>`;
+      html += '<table><tr><th>Month</th><th>Status</th></tr>';
+      cycles.forEach(cycle => {
+        html += `<tr><td>${cycle.monthDisplay}</td><td class="${cycle.isActive ? 'active' : 'paused'}">${cycle.status}</td></tr>`;
+      });
+      html += '</table>';
+      document.getElementById('cycleTest').innerHTML = html;
+    } catch (error) {
+      document.getElementById('cycleTest').innerHTML = `<div class="test-result error">❌ Error: ${error.message}</div>`;
+    }
+
+    // Test sorting
+    try {
+      const timeline = generateMedicineTimeline(testMedicines, new Date(2024, 0, 1), 12);
+      let html = '<div class="test-result">✅ Sorting test successful</div>';
+      html += '<p>Medicines sorted by time:</p><ol>';
+      timeline.forEach(med => {
+        html += `<li>${med.name} - ${med.time} (order: ${med.timeOrder})</li>`;
+      });
+      html += '</ol>';
+      
+      // Verify order
+      let correctOrder = true;
+      for (let i = 1; i < timeline.length; i++) {
+        if (timeline[i].timeOrder < timeline[i-1].timeOrder) {
+          correctOrder = false;
+          break;
+        }
+      }
+      
+      html += correctOrder ? 
+        '<p style="color: #10b981;">✅ Medicines are correctly sorted by time</p>' :
+        '<p style="color: #ef4444;">❌ Sorting order is incorrect</p>';
+      
+      document.getElementById('sortingTest').innerHTML = html;
+    } catch (error) {
+      document.getElementById('sortingTest').innerHTML = `<div class="test-result error">❌ Error: ${error.message}</div>`;
+    }
+  </script>
+</body>
+</html>
+

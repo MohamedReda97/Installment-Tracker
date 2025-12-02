@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Installments Timeline</title>
+  <title>Personal Finance & Health Tracker</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
@@ -12,16 +12,20 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Data labels plugin -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
+  <!-- Chart.js Drag Data Plugin -->
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@2.2.5"></script>
   <!-- Styles -->
   <link rel="stylesheet" href="css/styles.css" />
+  <link rel="stylesheet" href="css/tabs.css" />
+  <link rel="stylesheet" href="css/medicine-tracker.css" />
 </head>
 <body>
-  <h1>Installments Timeline</h1>
+  <h1>Personal Finance & Health Tracker</h1>
 
   <!-- Authentication Section -->
   <div class="card" id="authSection" style="display: none;">
     <div style="text-align: center; padding: 2rem;">
-      <h2>Welcome to Installment Tracker</h2>
+      <h2>Welcome to Your Tracker</h2>
       <p style="color: #9ca3af; margin-bottom: 1.5rem;">Sign in to sync your data across all devices</p>
       <button class="primary" onclick="showLoginModal()">Sign In / Sign Up</button>
     </div>
@@ -38,8 +42,23 @@
     </div>
   </div>
 
+  <!-- Tab Navigation -->
+  <div id="tabNavigation" class="tab-nav" style="display: none;">
+    <button class="tab-btn active" data-tab="installments">
+      <span class="icon">💳</span>
+      <span>Installment Tracker</span>
+    </button>
+    <button class="tab-btn" data-tab="medicine">
+      <span class="icon">💊</span>
+      <span>Medicine Tracker</span>
+    </button>
+  </div>
+
   <!-- Main App Content -->
   <div id="appContent" style="display: none;">
+
+  <!-- Installment Tracker Tab -->
+  <div id="installmentsTab" class="tab-content active">
   <div class="card">
     <div class="toolbar">
       <div>
@@ -107,6 +126,78 @@
     </div>
   </div>
   </div>
+  <!-- End of Installment Tracker Tab -->
+
+  <!-- Medicine Tracker Tab -->
+  <div id="medicineTab" class="tab-content">
+    <div class="card">
+      <div class="toolbar">
+        <div style="flex: 1 1 auto;">
+          <span id="medicineAutoSaveStatus" style="color: #6b7280; font-size: 0.875rem; font-style: italic;"></span>
+        </div>
+        <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+          <button class="primary" id="calculateMedicineTimelineBtn" type="button">📊 Calculate Timeline</button>
+          <button class="secondary" id="addMedicineRowBtn" type="button">＋ Add Medicine</button>
+          <button class="secondary" id="saveMedicineDataBtn" type="button">💾 Save to File</button>
+          <button class="secondary" id="importMedicineDataBtn" type="button">📤 Import from File</button>
+        </div>
+      </div>
+
+      <table id="medicineTable">
+        <thead>
+          <tr>
+            <th>Name</th>
+            <th>Dose</th>
+            <th>Time</th>
+            <th>Start Date</th>
+            <th>Duration (months)</th>
+            <th>Pause (months)</th>
+            <th>Notes</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- Rows will be loaded from Firestore or added dynamically -->
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>Medicine Timeline</h2>
+      <div class="small-hint" style="margin-bottom: 0.5rem;">
+        Click on any month to see medicine details. Drag bars to reorder or change start dates.
+      </div>
+      <div class="chart-scroll-container" style="overflow-x: auto; overflow-y: hidden; max-width: 100%;">
+        <canvas id="medicineChart"></canvas>
+      </div>
+
+      <!-- Apply/Revert Buttons -->
+      <div id="medicineChartActions" style="display: none; margin-top: 1rem; display: flex; gap: 0.75rem; justify-content: center;">
+        <button class="primary" id="applyMedicineChangesBtn" type="button">✅ Apply Changes</button>
+        <button class="secondary" id="revertMedicineChangesBtn" type="button">↩️ Revert Changes</button>
+      </div>
+
+      <!-- Month Detail Section -->
+      <div id="medicineMonthDetail" style="display: none; margin-top: 1.5rem;">
+        <h3 id="medicineMonthDetailTitle" style="color: #f9fafb; margin-bottom: 0.5rem;"></h3>
+        <table id="medicineMonthDetailTable">
+          <thead>
+            <tr>
+              <th>Time</th>
+              <th>Medicine</th>
+              <th>Dose</th>
+              <th>Status</th>
+              <th>Notes</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+  <!-- End of Medicine Tracker Tab -->
+
+  </div>
   <!-- End of appContent -->
 
   <!-- Authentication Modal -->
@@ -136,13 +227,27 @@
   </div>
 
   <!-- JavaScript files in order -->
+  <!-- Shared utilities -->
+  <script src="js/shared/tab-manager.js"></script>
+
+  <!-- Firebase -->
   <script src="js/firebase-config.js"></script>
   <script src="js/firebase-auth.js"></script>
+
+  <!-- Installment Tracker -->
   <script src="js/utils.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/table.js"></script>
   <script src="js/calculations.js"></script>
   <script src="js/chart.js"></script>
+
+  <!-- Medicine Tracker (to be created) -->
+  <script src="js/medicine/medicine-table.js"></script>
+  <script src="js/medicine/medicine-storage.js"></script>
+  <script src="js/medicine/medicine-calculations.js"></script>
+  <script src="js/medicine/medicine-chart.js"></script>
+
+  <!-- Main app initialization -->
   <script src="js/app.js"></script>
 </body>
 </html>

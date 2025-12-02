@@ -1,0 +1,125 @@
+/* Medicine Tracker Specific Styles */
+
+#medicineTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+#medicineTable thead {
+  background: #111827;
+}
+
+#medicineTable th {
+  padding: 0.75rem 0.5rem;
+  text-align: left;
+  font-weight: 600;
+  color: #f9fafb;
+  border-bottom: 2px solid #374151;
+}
+
+#medicineTable td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #374151;
+}
+
+#medicineTable input,
+#medicineTable select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+#medicineTable select {
+  background: #1f2937;
+  color: #f9fafb;
+  border: 1px solid #374151;
+  padding: 0.5rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+#medicineTable select:hover {
+  border-color: #3b82f6;
+}
+
+#medicineTable select:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+#medicineTable tbody tr:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+/* Medicine chart container */
+.chart-scroll-container {
+  position: relative;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 1rem 0;
+}
+
+#medicineChart {
+  display: block;
+  min-height: 400px;
+  max-height: 600px;
+}
+
+/* Medicine month detail table */
+#medicineMonthDetailTable {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 0.5rem;
+}
+
+#medicineMonthDetailTable th {
+  padding: 0.5rem;
+  text-align: left;
+  font-weight: 600;
+  color: #f9fafb;
+  background: #111827;
+  border-bottom: 2px solid #374151;
+}
+
+#medicineMonthDetailTable td {
+  padding: 0.5rem;
+  border-bottom: 1px solid #374151;
+}
+
+#medicineMonthDetailTable tbody tr:hover {
+  background: rgba(59, 130, 246, 0.1);
+}
+
+/* Status badges */
+.medicine-status-active {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: #10b981;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.medicine-status-paused {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: #6b7280;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.medicine-status-completed {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: #3b82f6;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
