@@ -76,7 +76,7 @@ const TEST_TIMELINE_CARDS = [
     }
   },
   {
-    // Card 5: 1 medicine paused (Vitamin D), 1 medicine resumed (would show as new if it was paused before)
+    // Card 5: 1 medicine paused (Vitamin D), 1 medicine paused (Magnesium)
     dateRange: {
       start: new Date(2026, 10, 1), // Nov 2026
       end: new Date(2026, 11, 31)   // Dec 2026
@@ -84,16 +84,14 @@ const TEST_TIMELINE_CARDS = [
     medicines: {
       'Morning': [
         { name: 'Omega-3', dose: '1000mg', change: null },
-        { name: 'Aspirin', dose: '81mg', change: null }
+        { name: 'Aspirin', dose: '81mg', change: null },
+        { name: 'Vitamin D', dose: '5000 IU', change: 'paused' }
       ],
       'Evening': [
         { name: 'Calcium', dose: '500mg', change: null },
-        { name: 'Magnesium', dose: '250mg', change: 'paused' } // Paused
+        { name: 'Magnesium', dose: '250mg', change: 'paused' }
       ]
-    },
-    pausedMedicines: [
-      { name: 'Vitamin D', dose: '5000 IU', time: 'Morning', change: 'paused' }
-    ]
+    }
   }
 ];
 
@@ -120,20 +118,47 @@ function formatCardDateRange(start, end) {
   return `${startMonth} ${startYear} - ${endMonth} ${endYear}`;
 }
 
+// Check if a card represents the current month
+function isCurrentMonth(cardData) {
+  const now = new Date();
+  const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const cardStart = new Date(cardData.dateRange.start.getFullYear(), cardData.dateRange.start.getMonth(), 1);
+  const cardEnd = new Date(cardData.dateRange.end.getFullYear(), cardData.dateRange.end.getMonth(), 1);
+
+  return currentMonth >= cardStart && currentMonth <= cardEnd;
+}
+
+// Sort medicines within a time group: NEW first, unchanged middle, PAUSED/ENDED last
+function sortMedicinesByChange(medicines) {
+  const sorted = [...medicines];
+  sorted.sort((a, b) => {
+    const orderMap = { 'new': 0, null: 1, 'paused': 2, 'ended': 2 };
+    const orderA = orderMap[a.change] ?? 1;
+    const orderB = orderMap[b.change] ?? 1;
+    return orderA - orderB;
+  });
+  return sorted;
+}
+
 // Render a single timeline card
 function renderTimelineCard(cardData) {
   const card = document.createElement('div');
   card.className = 'timeline-card';
-  
+
+  // Add current month indicator
+  if (isCurrentMonth(cardData)) {
+    card.classList.add('current-month');
+  }
+
   // Card header with date range
   const header = document.createElement('div');
   header.className = 'timeline-card-header';
-  
+
   const dateRange = document.createElement('h3');
   dateRange.className = 'timeline-card-date';
   dateRange.textContent = formatCardDateRange(cardData.dateRange.start, cardData.dateRange.end);
   header.appendChild(dateRange);
-  
+
   card.appendChild(header);
   
   // Card body with medicines grouped by time
@@ -143,7 +168,7 @@ function renderTimelineCard(cardData) {
   // Time groups in order
   const timeOrder = ['Morning', 'Breakfast', 'Lunch', 'Dinner', 'Evening'];
 
-  // Render active medicines grouped by time
+  // Render medicines grouped by time
   timeOrder.forEach(time => {
     if (cardData.medicines[time] && cardData.medicines[time].length > 0) {
       const timeGroup = document.createElement('div');
@@ -155,13 +180,20 @@ function renderTimelineCard(cardData) {
       timeHeader.textContent = time;
       timeGroup.appendChild(timeHeader);
 
-      // Medicine list
+      // Medicine list (sorted: NEW first, unchanged middle, PAUSED/ENDED last)
       const medicineList = document.createElement('ul');
       medicineList.className = 'timeline-medicine-list';
 
-      cardData.medicines[time].forEach(medicine => {
+      const sortedMedicines = sortMedicinesByChange(cardData.medicines[time]);
+
+      sortedMedicines.forEach(medicine => {
         const medicineItem = document.createElement('li');
         medicineItem.className = 'timeline-medicine-item';
+
+        // Add change class for styling
+        if (medicine.change) {
+          medicineItem.classList.add(`change-${medicine.change}`);
+        }
 
         // Medicine info
         const medicineInfo = document.createElement('div');
@@ -179,14 +211,6 @@ function renderTimelineCard(cardData) {
 
         medicineItem.appendChild(medicineInfo);
 
-        // Change badge (if applicable)
-        if (medicine.change) {
-          const badge = document.createElement('span');
-          badge.className = `timeline-change-badge timeline-badge-${medicine.change}`;
-          badge.textContent = medicine.change.toUpperCase();
-          medicineItem.appendChild(badge);
-        }
-
         medicineList.appendChild(medicineItem);
       });
 
@@ -194,98 +218,6 @@ function renderTimelineCard(cardData) {
       body.appendChild(timeGroup);
     }
   });
-
-  // Show paused medicines (if any)
-  if (cardData.pausedMedicines && cardData.pausedMedicines.length > 0) {
-    const pausedGroup = document.createElement('div');
-    pausedGroup.className = 'timeline-time-group';
-    pausedGroup.style.opacity = '0.6';
-
-    const pausedHeader = document.createElement('div');
-    pausedHeader.className = 'timeline-time-header';
-    pausedHeader.style.color = '#6b7280';
-    pausedHeader.textContent = 'Paused';
-    pausedGroup.appendChild(pausedHeader);
-
-    const pausedList = document.createElement('ul');
-    pausedList.className = 'timeline-medicine-list';
-
-    cardData.pausedMedicines.forEach(medicine => {
-      const medicineItem = document.createElement('li');
-      medicineItem.className = 'timeline-medicine-item';
-
-      const medicineInfo = document.createElement('div');
-      medicineInfo.className = 'timeline-medicine-info';
-
-      const medicineName = document.createElement('div');
-      medicineName.className = 'timeline-medicine-name';
-      medicineName.textContent = `${medicine.name} (${medicine.time})`;
-      medicineInfo.appendChild(medicineName);
-
-      const medicineDose = document.createElement('div');
-      medicineDose.className = 'timeline-medicine-dose';
-      medicineDose.textContent = medicine.dose;
-      medicineInfo.appendChild(medicineDose);
-
-      medicineItem.appendChild(medicineInfo);
-
-      const badge = document.createElement('span');
-      badge.className = 'timeline-change-badge timeline-badge-paused';
-      badge.textContent = 'PAUSED';
-      medicineItem.appendChild(badge);
-
-      pausedList.appendChild(medicineItem);
-    });
-
-    pausedGroup.appendChild(pausedList);
-    body.appendChild(pausedGroup);
-  }
-
-  // Show ended medicines (if any)
-  if (cardData.endedMedicines && cardData.endedMedicines.length > 0) {
-    const endedGroup = document.createElement('div');
-    endedGroup.className = 'timeline-time-group';
-    endedGroup.style.opacity = '0.6';
-
-    const endedHeader = document.createElement('div');
-    endedHeader.className = 'timeline-time-header';
-    endedHeader.style.color = '#ef4444';
-    endedHeader.textContent = 'Ended';
-    endedGroup.appendChild(endedHeader);
-
-    const endedList = document.createElement('ul');
-    endedList.className = 'timeline-medicine-list';
-
-    cardData.endedMedicines.forEach(medicine => {
-      const medicineItem = document.createElement('li');
-      medicineItem.className = 'timeline-medicine-item';
-
-      const medicineInfo = document.createElement('div');
-      medicineInfo.className = 'timeline-medicine-info';
-
-      const medicineName = document.createElement('div');
-      medicineName.className = 'timeline-medicine-name';
-      medicineName.textContent = `${medicine.name} (${medicine.time})`;
-      medicineInfo.appendChild(medicineName);
-
-      const medicineDose = document.createElement('div');
-      medicineDose.className = 'timeline-medicine-dose';
-      medicineDose.textContent = medicine.dose;
-      medicineInfo.appendChild(medicineDose);
-
-      medicineItem.appendChild(medicineInfo);
-
-      const badge = document.createElement('span');
-      badge.className = 'timeline-change-badge timeline-badge-ended';
-      badge.textContent = 'ENDED';
-      medicineItem.appendChild(badge);
-
-      endedList.appendChild(medicineItem);
-    });
-
-    endedGroup.appendChild(endedList);
-    body.appendChild(endedGroup);
-  }
 
   card.appendChild(body);
   return card;
