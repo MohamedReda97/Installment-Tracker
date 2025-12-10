@@ -123,3 +123,155 @@
   font-weight: 500;
 }
 
+/* Card-based Timeline Styles */
+.medicine-timeline-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+  padding: 0.5rem 0;
+}
+
+.timeline-card {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  overflow: hidden;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.timeline-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.timeline-card-header {
+  background: #111827;
+  padding: 1rem;
+  border-bottom: 1px solid #374151;
+}
+
+.timeline-card-date {
+  color: #f9fafb;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.timeline-card-body {
+  padding: 1rem;
+}
+
+.timeline-time-group {
+  margin-bottom: 1.25rem;
+}
+
+.timeline-time-group:last-child {
+  margin-bottom: 0;
+}
+
+.timeline-time-header {
+  color: #3b82f6;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid #374151;
+}
+
+.timeline-medicine-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.timeline-medicine-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.timeline-medicine-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.timeline-medicine-name {
+  color: #f9fafb;
+  font-weight: 500;
+}
+
+.timeline-medicine-dose {
+  color: #9ca3af;
+  font-size: 0.85rem;
+}
+
+.timeline-change-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.timeline-badge-new {
+  background: #10b981;
+  color: #fff;
+}
+
+.timeline-badge-paused {
+  background: #6b7280;
+  color: #fff;
+}
+
+.timeline-badge-ended {
+  background: #ef4444;
+  color: #fff;
+}
+
+.timeline-empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #9ca3af;
+}
+
+.timeline-empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.timeline-empty-state-text {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.timeline-empty-state-hint {
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .medicine-timeline-cards {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+@media (min-width: 769px) and (max-width: 1024px) {
+  .medicine-timeline-cards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+

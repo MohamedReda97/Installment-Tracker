@@ -1,6 +1,6 @@
-// Medicine Chart - Interactive timeline with drag-and-drop
+// Medicine Chart - ApexCharts Timeline Implementation
 
-console.log('📊 Medicine Chart module loaded');
+console.log('📊 Medicine Chart module loaded (ApexCharts)');
 
 let medicineChart = null;
 let currentMedicineTimeline = null;
@@ -55,63 +55,72 @@ function formatChartMonthLabel(date) {
   return months[date.getMonth()] + ' ' + date.getFullYear();
 }
 
-// Create datasets for the chart
-// For horizontal bars with indexAxis='y', we need:
-// - labels = medicine names (Y-axis)
-// - datasets = one per month, each with data for all medicines
-function createMedicineChartDatasets(timeline) {
-  const datasets = [];
+// Convert timeline data to ApexCharts rangeBar format
+// Each medicine will have multiple date ranges (active periods with gaps for pauses)
+function createApexChartData(timeline) {
+  const series = [];
 
-  // Get all month labels and medicine labels (name only)
-  const monthLabels = timeline[0]?.months.map(m => formatChartMonthLabel(m.date)) || [];
-  const medicineLabels = timeline.map(m => m.name); // Only medicine name
-
-  console.log('📊 Creating chart datasets...');
+  console.log('📊 Creating ApexCharts data...');
   console.log(`   Medicines: ${timeline.length}`);
-  console.log(`   Months: ${monthLabels.length}`);
 
-  // Create one dataset per month
-  monthLabels.forEach((monthLabel, monthIndex) => {
-    // For this month, get data for each medicine
-    const data = [];
-    const backgroundColor = [];
+  timeline.forEach((medicine, medicineIndex) => {
+    const medicineColor = medicineColorPalette[medicineIndex % medicineColorPalette.length];
+    const ranges = [];
 
-    timeline.forEach((medicine, medicineIndex) => {
-      const monthData = medicine.months[monthIndex];
-      const medicineColor = medicineColorPalette[medicineIndex % medicineColorPalette.length];
+    // Find continuous active periods
+    let rangeStart = null;
+    let rangeEnd = null;
 
-      if (monthData && monthData.isActive) {
-        data.push(1);
-        backgroundColor.push(medicineColor);
+    medicine.months.forEach((monthData, monthIndex) => {
+      if (monthData.isActive) {
+        if (rangeStart === null) {
+          // Start new range
+          rangeStart = monthData.date;
+        }
+        rangeEnd = monthData.date;
+
+        // If this is the last month, close the range
+        if (monthIndex === medicine.months.length - 1) {
+          // Add one month to end date to show full month
+          const endDate = new Date(rangeEnd);
+          endDate.setMonth(endDate.getMonth() + 1);
+
+          ranges.push({
+            x: medicine.name, // Y-axis label (medicine name only)
+            y: [rangeStart.getTime(), endDate.getTime()],
+            fillColor: medicineColor
+          });
+        }
       } else {
-        data.push(null); // null creates gap
-        backgroundColor.push('transparent');
+        // Paused month - close current range if exists
+        if (rangeStart !== null && rangeEnd !== null) {
+          // Add one month to end date to show full month
+          const endDate = new Date(rangeEnd);
+          endDate.setMonth(endDate.getMonth() + 1);
+
+          ranges.push({
+            x: medicine.name,
+            y: [rangeStart.getTime(), endDate.getTime()],
+            fillColor: medicineColor
+          });
+
+          rangeStart = null;
+          rangeEnd = null;
+        }
       }
     });
 
-    datasets.push({
-      label: monthLabel,
-      data: data,
-      backgroundColor: backgroundColor,
-      borderColor: backgroundColor,
-      borderWidth: 0,
-      borderSkipped: false,
-      monthIndex: monthIndex,
-      monthLabel: monthLabel
+    // Add series for this medicine
+    series.push({
+      name: `${medicine.name} (${medicine.dose}) - ${medicine.time}`,
+      data: ranges
     });
+
+    console.log(`   ${medicine.name}: ${ranges.length} active periods`);
   });
 
-  console.log(`✅ Created ${datasets.length} datasets (one per month)`);
-
-  // Log medicine details
-  timeline.forEach((medicine, index) => {
-    const activeCount = medicine.months.filter(m => m.isActive).length;
-    const pausedCount = medicine.months.filter(m => !m.isActive).length;
-    const color = medicineColorPalette[index % medicineColorPalette.length];
-    console.log(`   ${medicine.name}: ${activeCount} active, ${pausedCount} paused (color: ${color})`);
-  });
-
-  return { datasets, monthLabels, medicineLabels, timeline };
+  console.log(`✅ Created ${series.length} series`);
+  return series;
 }
 
 // Show month detail when clicking on a bar
@@ -187,9 +196,9 @@ function hideMedicineMonthDetail() {
   }
 }
 
-// Render the medicine chart
+// Render the medicine chart using ApexCharts
 function renderMedicineChart(timeline, startMonth) {
-  console.log('📊 Rendering medicine chart...');
+  console.log('📊 Rendering medicine chart with ApexCharts...');
 
   try {
     // Store current timeline
@@ -202,42 +211,24 @@ function renderMedicineChart(timeline, startMonth) {
       return;
     }
 
-    // Create datasets first to get monthLabels and medicineLabels
-    const { datasets, monthLabels, medicineLabels, timeline: timelineData } = createMedicineChartDatasets(timeline);
-
-    // Get canvas
-    const canvas = document.getElementById('medicineChart');
-    if (!canvas) {
-      console.error('❌ Medicine chart canvas not found');
+    // Get chart container
+    const chartContainer = document.getElementById('medicineChart');
+    if (!chartContainer) {
+      console.error('❌ Medicine chart container not found');
       return;
     }
-
-    // Set canvas dimensions for horizontal scrolling
-    const medicineHeight = 50; // Height per medicine row
-    const calculatedHeight = Math.max(400, timeline.length * medicineHeight + 150);
-    const monthWidth = 80; // Width per month column
-    const calculatedWidth = Math.max(1200, monthLabels.length * monthWidth);
-
-    canvas.style.height = calculatedHeight + 'px';
-    canvas.style.width = calculatedWidth + 'px';
-
-    console.log(`📐 Canvas size: ${calculatedWidth}x${calculatedHeight}px (${monthLabels.length} months × ${timeline.length} medicines)`);
-
-    const ctx = canvas.getContext('2d');
 
     // Destroy existing chart
     if (medicineChart) {
       medicineChart.destroy();
+      medicineChart = null;
     }
 
-    // Group medicines by time for separators
-    const timeGroups = {};
-    timeline.forEach((medicine, index) => {
-      if (!timeGroups[medicine.time]) {
-        timeGroups[medicine.time] = [];
-      }
-      timeGroups[medicine.time].push({ medicine, index });
-    });
+    // Clear container
+    chartContainer.innerHTML = '';
+
+    // Create ApexCharts data
+    const series = createApexChartData(timeline);
 
     // Create legend data for medicines
     const medicineLegend = timeline.map((medicine, index) => ({
@@ -246,110 +237,147 @@ function renderMedicineChart(timeline, startMonth) {
       time: medicine.time
     }));
 
-    // Create new chart
-    medicineChart = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: medicineLabels, // Medicine names on Y-axis (when indexAxis='y')
-        datasets: datasets
-      },
-      options: {
-        indexAxis: 'y', // Horizontal bars (medicines on Y-axis, months on X-axis)
-        responsive: true,
-        maintainAspectRatio: false,
-        onClick: (event, activeElements) => {
-          if (activeElements.length > 0) {
-            const datasetIndex = activeElements[0].datasetIndex;
-            const monthIndex = activeElements[0].index;
-            const monthLabel = monthLabels[monthIndex];
-            showMedicineMonthDetail(monthLabel, monthIndex);
-          }
+    // Group medicines by time for Y-axis grouping
+    const timeGroups = {};
+    timeline.forEach((medicine, index) => {
+      if (!timeGroups[medicine.time]) {
+        timeGroups[medicine.time] = [];
+      }
+      timeGroups[medicine.time].push(medicine.name);
+    });
+
+    // ApexCharts options
+    const options = {
+      series: series,
+      chart: {
+        type: 'rangeBar',
+        height: Math.max(400, timeline.length * 60 + 100),
+        toolbar: {
+          show: false
         },
-        plugins: {
-          legend: {
-            display: false // Hide default legend (we'll show custom legend)
-          },
-          tooltip: {
-            callbacks: {
-              title: (context) => {
-                const medicineIndex = context[0].dataIndex;
-                const medicineName = medicineLabels[medicineIndex];
-                const datasetIndex = context[0].datasetIndex;
-                const monthLabel = monthLabels[datasetIndex];
-                return `${medicineName} - ${monthLabel}`;
-              },
-              label: (context) => {
-                const medicineIndex = context.dataIndex;
-                const datasetIndex = context.datasetIndex;
-                const medicine = timelineData[medicineIndex];
-                const monthData = medicine.months[datasetIndex];
-                return `Status: ${monthData.status.charAt(0).toUpperCase() + monthData.status.slice(1)}`;
-              }
-            }
-          }
-        },
-        scales: {
-          x: {
-            stacked: true, // Stack months horizontally
-            display: true,
-            grid: {
-              display: false
-            },
-            ticks: {
-              display: false // Hide X-axis ticks (we'll show months in legend)
-            },
-            title: {
-              display: false
-            }
-          },
-          y: {
-            stacked: true, // Stack for each medicine row
-            display: true,
-            grid: {
-              display: true,
-              color: (context) => {
-                // Add separator lines between time groups
-                const index = context.index;
-                if (index === undefined) return '#374151';
+        background: 'transparent',
+        events: {
+          dataPointSelection: (event, chartContext, config) => {
+            // Handle click on bar to show details
+            const seriesIndex = config.seriesIndex;
+            const dataPointIndex = config.dataPointIndex;
+            const medicine = timeline[seriesIndex];
 
-                // Check if this is the last medicine of a time group
-                const currentMedicine = timelineData[index];
-                const nextMedicine = timelineData[index + 1];
+            // Find which month was clicked based on the date range
+            const clickedRange = series[seriesIndex].data[dataPointIndex];
+            const clickedDate = new Date(clickedRange.y[0]);
 
-                if (nextMedicine && currentMedicine.time !== nextMedicine.time) {
-                  return '#6b7280'; // Thicker line between groups
-                }
-                return '#374151'; // Normal line
-              },
-              lineWidth: (context) => {
-                const index = context.index;
-                if (index === undefined) return 1;
+            // Find the month index
+            const monthIndex = medicine.months.findIndex(m => {
+              const monthDate = new Date(m.date);
+              return monthDate.getFullYear() === clickedDate.getFullYear() &&
+                     monthDate.getMonth() === clickedDate.getMonth();
+            });
 
-                const currentMedicine = timelineData[index];
-                const nextMedicine = timelineData[index + 1];
-
-                if (nextMedicine && currentMedicine.time !== nextMedicine.time) {
-                  return 3; // Thicker line between groups
-                }
-                return 1;
-              }
-            },
-            ticks: {
-              color: '#9ca3af',
-              font: {
-                size: 11
-              }
+            if (monthIndex >= 0) {
+              const monthLabel = formatChartMonthLabel(medicine.months[monthIndex].date);
+              showMedicineMonthDetail(monthLabel, monthIndex);
             }
           }
         }
+      },
+      plotOptions: {
+        bar: {
+          horizontal: true,
+          barHeight: '70%',
+          rangeBarGroupRows: false
+        }
+      },
+      colors: medicineColorPalette,
+      fill: {
+        type: 'solid',
+        opacity: 1
+      },
+      xaxis: {
+        type: 'datetime',
+        labels: {
+          style: {
+            colors: '#9ca3af',
+            fontSize: '11px'
+          },
+          datetimeFormatter: {
+            year: 'yyyy',
+            month: 'MMM yyyy',
+            day: 'dd MMM',
+            hour: 'HH:mm'
+          }
+        },
+        axisBorder: {
+          show: true,
+          color: '#374151'
+        },
+        axisTicks: {
+          show: true,
+          color: '#374151'
+        }
+      },
+      yaxis: {
+        labels: {
+          style: {
+            colors: '#9ca3af',
+            fontSize: '11px'
+          }
+        }
+      },
+      grid: {
+        borderColor: '#374151',
+        strokeDashArray: 0,
+        xaxis: {
+          lines: {
+            show: true
+          }
+        },
+        yaxis: {
+          lines: {
+            show: true
+          }
+        }
+      },
+      tooltip: {
+        theme: 'dark',
+        custom: function({ series, seriesIndex, dataPointIndex, w }) {
+          const medicine = timeline[seriesIndex];
+          const range = w.config.series[seriesIndex].data[dataPointIndex];
+          const startDate = new Date(range.y[0]);
+          const endDate = new Date(range.y[1]);
+
+          return `
+            <div style="padding: 10px; background: #1f2937; border: 1px solid #374151;">
+              <div style="color: #f9fafb; font-weight: 600; margin-bottom: 5px;">
+                ${medicine.name}
+              </div>
+              <div style="color: #9ca3af; font-size: 12px;">
+                ${medicine.dose} - ${medicine.time}
+              </div>
+              <div style="color: #9ca3af; font-size: 12px; margin-top: 5px;">
+                ${formatChartMonthLabel(startDate)} - ${formatChartMonthLabel(endDate)}
+              </div>
+            </div>
+          `;
+        }
+      },
+      legend: {
+        show: false // We'll use custom legend
+      },
+      theme: {
+        mode: 'dark'
       }
-    });
+    };
+
+    // Create chart
+    medicineChart = new ApexCharts(chartContainer, options);
+    medicineChart.render();
 
     // Add custom legend showing medicine colors grouped by time
     addCustomLegend(medicineLegend);
 
-    console.log('✅ Medicine chart rendered successfully');
-    console.log(`📊 Displaying ${timeline.length} medicines across ${monthLabels.length} months`);
+    console.log('✅ Medicine chart rendered successfully with ApexCharts');
+    console.log(`📊 Displaying ${timeline.length} medicines`);
 
   } catch (error) {
     console.error('❌ Error rendering medicine chart:', error);

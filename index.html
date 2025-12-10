@@ -8,12 +8,14 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
-  <!-- Chart.js -->
+  <!-- Chart.js (for Installment Tracker) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <!-- Data labels plugin -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2"></script>
   <!-- Chart.js Drag Data Plugin -->
   <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-dragdata@2.2.5"></script>
+  <!-- ApexCharts (for Medicine Timeline) -->
+  <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
   <!-- Styles -->
   <link rel="stylesheet" href="css/styles.css" />
   <link rel="stylesheet" href="css/tabs.css" />
@@ -165,33 +167,12 @@
     <div class="card">
       <h2>Medicine Timeline</h2>
       <div class="small-hint" style="margin-bottom: 0.5rem;">
-        Click on any month to see medicine details. Drag bars to reorder or change start dates.
-      </div>
-      <div class="chart-scroll-container" style="overflow-x: auto; overflow-y: hidden; max-width: 100%;">
-        <canvas id="medicineChart"></canvas>
+        View your medicine schedule organized by time periods. Changes are highlighted with colored badges.
       </div>
 
-      <!-- Apply/Revert Buttons -->
-      <div id="medicineChartActions" style="display: none; margin-top: 1rem; display: flex; gap: 0.75rem; justify-content: center;">
-        <button class="primary" id="applyMedicineChangesBtn" type="button">✅ Apply Changes</button>
-        <button class="secondary" id="revertMedicineChangesBtn" type="button">↩️ Revert Changes</button>
-      </div>
-
-      <!-- Month Detail Section -->
-      <div id="medicineMonthDetail" style="display: none; margin-top: 1.5rem;">
-        <h3 id="medicineMonthDetailTitle" style="color: #f9fafb; margin-bottom: 0.5rem;"></h3>
-        <table id="medicineMonthDetailTable">
-          <thead>
-            <tr>
-              <th>Time</th>
-              <th>Medicine</th>
-              <th>Dose</th>
-              <th>Status</th>
-              <th>Notes</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
+      <!-- Card-based Timeline Container -->
+      <div id="medicineTimelineCards" class="medicine-timeline-cards">
+        <!-- Cards will be generated here -->
       </div>
     </div>
   </div>
@@ -241,11 +222,12 @@
   <script src="js/calculations.js"></script>
   <script src="js/chart.js"></script>
 
-  <!-- Medicine Tracker (to be created) -->
+  <!-- Medicine Tracker -->
   <script src="js/medicine/medicine-table.js"></script>
   <script src="js/medicine/medicine-storage.js"></script>
   <script src="js/medicine/medicine-calculations.js"></script>
   <script src="js/medicine/medicine-chart.js"></script>
+  <script src="js/medicine/medicine-timeline-cards.js"></script>
 
   <!-- Main app initialization -->
   <script src="js/app.js"></script>

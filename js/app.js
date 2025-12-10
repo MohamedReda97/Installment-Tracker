@@ -238,9 +238,14 @@ async function initMedicineTab() {
   const calculateMedicineBtn = document.getElementById('calculateMedicineTimelineBtn');
   if (calculateMedicineBtn) {
     calculateMedicineBtn.addEventListener('click', () => {
-      if (typeof calculateMedicineTimeline === 'function') {
-        calculateMedicineTimeline();
+      // PHASE 1: Use hardcoded test data for card-based timeline
+      if (typeof initializeTimelineCards === 'function') {
+        initializeTimelineCards();
       }
+      // PHASE 2: Will use real data from calculateMedicineTimeline()
+      // if (typeof calculateMedicineTimeline === 'function') {
+      //   calculateMedicineTimeline();
+      // }
     });
   }
 
